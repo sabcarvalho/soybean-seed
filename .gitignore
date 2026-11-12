@@ -1,5 +1,4 @@
 # Dados e saídas (nunca versionar)
-data/
 output/
 *.tif
 *.tiff
