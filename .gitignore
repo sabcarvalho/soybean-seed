@@ -1,0 +1,25 @@
+# Dados e saídas (nunca versionar)
+data/
+output/
+*.tif
+*.tiff
+*.bil
+*.hdr
+*.bmp
+*.npy
+*.png
+*.jpg
+*.json
+!config.example.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.egg-info/
+dist/
+build/

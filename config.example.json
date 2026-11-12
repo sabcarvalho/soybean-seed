@@ -1,0 +1,43 @@
+{
+  "data_dir": "data",
+  "output_dir": "output",
+  "file_templates": {
+    "rgb": "RIP2_{id}-RGB.tif",
+    "rx": "RIP2_{id}.bmp",
+    "bil": "RIP2_{id}.bil",
+    "hdr": "RIP2_{id}.bil.hdr",
+    "json": "RIP2_{id}-RGB.json"
+  },
+  "labeled_ids":   [],
+  "unlabeled_ids": [],
+  "pipeline": {
+    "roi": [30, 600, 200, 650],
+    "crop_size": [64, 45],
+    "columns_per_row": 5,
+    "n_hyperspectral_bands": 150,
+    "rgb_erosion": 13,
+    "rgb_dilation": 3,
+    "rx_erosion": 5,
+    "rx_dilation": 2,
+    "min_circularity": 0.3,
+    "min_area": 0.3
+  },
+  "labeled_dir": "data/labeled",
+  "features_dir": "output/features",
+  "models": [
+    "vgg16",
+    "vgg19",
+    "resnet50",
+    "inception_v3",
+    "efficientnet_b0",
+    "mobilenet_v3_large"
+  ],
+  "torch_training": {
+    "epoch_num": 10,
+    "lr": 0.001,
+    "weight_decay": 0.008,
+    "batch_size": 20
+  },
+  "cv_folds": 5,
+  "random_state": 42
+}
