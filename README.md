@@ -1,10 +1,10 @@
-# Repositório do projeto FAPESP intitulado "Inteligência Artificial Explicável para a Classificação de Sementes de Soja".
+# Repositório do projeto FAPESP: Inteligência Artificial Explicável para a Classificação de Sementes de Soja.
 
 ### Disponibilidade de dados
 
 As imagens brutas utilizadas neste trabalho **não podem ser divulgadas**
 devido a restrições institucionais. O código é publicado para fins de
-reprodutibilidade metodológica.
+reprodutibilidade metodológica. Há dados fictícios anexos no diretório `data/mock` para testes.
 
 ### Instalação
 

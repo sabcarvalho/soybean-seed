@@ -1,6 +1,6 @@
 # Data
 
-Os dados originais **não estão incluídos** neste repositório.
+Os dados originais **não estão incluídos** neste repositório. Há dados fictícios anexos no diretório `data/mock` para testes.
 
 Para executar o pipeline é necessário ter, para cada imagem `<id>`, os arquivos:
 

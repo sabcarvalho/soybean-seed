@@ -33,15 +33,15 @@ def main(config_path: str):
               [(i, False) for i in unlabeled_ids if i not in labeled_set]
 
     for image_id, is_labeled in all_ids:
-        #try:
+        try:
             data = read_seed_entry(
                 image_id, data_dir, templates,
                 n_bands=cfg.n_hyperspectral_bands, load_json=is_labeled)
             pipe = SegmentationPipeline(data, cfg)
             pipe.run()
             pipe.save_cropped_seeds(output_dir, f"bandeja_{image_id}")
-        # except Exception as e:
-        #     print(f"[ERRO] {image_id}: {e}")
+        except Exception as e:
+            print(f"[ERRO] {image_id}: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
