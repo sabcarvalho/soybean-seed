@@ -23,17 +23,18 @@ class SegmentationPipeline:
         points = anote_points(self.json) if self.json is not None else None
         cols = self.cfg.columns_per_row
 
-        # RGB
-        contours = segmentation_rgb(self.rgb_img, self.cfg, self.cfg.roi)
+        contours, _ = segmentation_rgb(
+            self.rgb_img, self.cfg, self.cfg.roi, return_mask=True
+        )
         centroids = calculate_centroids(contours)
         ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
 
-        # RX
-        contours_rx = segmentation_rx(self.rx_img, self.cfg, rotate=True)
+        contours_rx, _ = segmentation_rx(
+            self.rx_img, self.cfg, rotate=True, return_mask=True
+        )
         centroids_rx = calculate_centroids(contours_rx)
         ord_cen_rx, _ = ordenate_points(centroids_rx, contours_rx, cols)
 
-        # Homography RX → RGB
         new_rx = homography(self.rx_img, ord_cen_rx, self.rgb_img,
                             ord_cen_rgb, self.cfg.ransac_threshold)
 
@@ -41,29 +42,51 @@ class SegmentationPipeline:
         new_cen_rx = calculate_centroids(new_cnt_rx)
         ocen, _ = ordenate_points(new_cen_rx, new_cnt_rx, cols)
 
-        # Crops
-        self.cropped_rgb, self.cropped_hiper = crop_seeds_centered(
+        cap = int((self.SIZEX ** 2 + self.SIZEY ** 2) ** 0.5) // 2
+
+        self.cropped_rgb, self.cropped_hiper, self.masks_rgb = crop_seeds_centered(
             self.rgb_img, ord_cen_rgb, points,
-            self.SIZEX, self.SIZEY, hiper=self.hiper_imgs, columns_per_row=cols)
+            self.SIZEX, self.SIZEY,
+            hiper=self.hiper_imgs,
+            columns_per_row=cols,
+            max_radius=cap,
+            mask_mode="rgb"
+        )
+        self.cropped_rx, _, self.masks_rx = crop_seeds_centered(
+            new_rx, ocen, points,
+            self.SIZEX, self.SIZEY,
+            columns_per_row=cols,
+            max_radius=cap,
+            mask_mode="rx"
+        )
 
-        self.cropped_rx, _ = crop_seeds_centered(
-            new_rx, ocen, points, self.SIZEX, self.SIZEY,
-            columns_per_row=cols)
 
-    def save_cropped_seeds(self, output_dir, image_id):
-        rgb_dir = os.path.join(output_dir, "RGB")
-        rx_dir = os.path.join(output_dir, "RX")
+    def save_cropped_seeds(self, output_dir, image_id, alpha=False):
+        rgb_dir  = os.path.join(output_dir, "RGB")
+        rx_dir   = os.path.join(output_dir, "RX")
         hiper_dir = os.path.join(output_dir, "HIPER")
         for d in (rgb_dir, rx_dir, hiper_dir):
             os.makedirs(d, exist_ok=True)
 
         for n, seed in enumerate(self.cropped_rgb):
             name = f"{image_id}_seed_{n:02d}_{seed[1]}.png"
-            if isinstance(seed[0], np.ndarray):
-                cv2.imwrite(os.path.join(rgb_dir, name), seed[0])
+            img_rgb = seed[0]
+            mask_rgb = self.masks_rgb[n] if n < len(self.masks_rgb) else None
+
+            if alpha and mask_rgb is not None:
+                out = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2BGRA)
+                out[:, :, 3] = mask_rgb
+                cv2.imwrite(os.path.join(rgb_dir, name), out)
+            else:
+                cv2.imwrite(os.path.join(rgb_dir, name), img_rgb)
 
             rx = self.cropped_rx[n][0]
-            if isinstance(rx, np.ndarray):
+            mask_rx = self.masks_rx[n] if n < len(self.masks_rx) else None
+            if alpha and mask_rx is not None:
+                out = cv2.cvtColor(rx, cv2.COLOR_BGR2BGRA)
+                out[:, :, 3] = mask_rx
+                cv2.imwrite(os.path.join(rx_dir, name), out)
+            else:
                 cv2.imwrite(os.path.join(rx_dir, name), rx)
 
             if self.cropped_hiper is not None and n < len(self.cropped_hiper):
