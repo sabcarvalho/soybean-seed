@@ -4,10 +4,11 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .segmentation import segmentation_rgb, segmentation_rx
+from .segmentation import segmentation_rgb, segmentation_rx, retry_segment_slot
 from .geometry import calculate_centroids, ordenate_points, homography
 from .cropping import crop_seeds_centered
 from .io_utils import anote_points
+from .diagnostic import diagnose_tray, split_merged_blob
 
 
 class SegmentationPipeline:
@@ -23,14 +24,59 @@ class SegmentationPipeline:
         points = anote_points(self.json) if self.json is not None else None
         cols = self.cfg.columns_per_row
 
-        contours, _ = segmentation_rgb(
+        contours, rgb_mask = segmentation_rgb(
             self.rgb_img, self.cfg, self.cfg.roi, return_mask=True
         )
         centroids = calculate_centroids(contours)
         ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
 
+        expected = self.cfg.expected_seeds
+        diag = diagnose_tray(self.rgb_img, contours, centroids, rgb_mask,
+                            expected=expected, n_cols=cols, verbose=False)
+
+        # --- resolução do problema ---
+        if diag["status"] in ("merged", "mixed") and diag["merges"]:
+            new_contours = []
+            for i, c in enumerate(contours):
+                if i in diag["merges"]:
+                    new_contours.extend(split_merged_blob(rgb_mask, c))
+                else:
+                    new_contours.append(c)
+            contours = tuple(new_contours)
+            centroids = calculate_centroids(contours)
+
+        if diag["status"] in ("undetected", "mixed") and diag["undetected_slots"]:
+            # ROI um pouco menor que o espaçamento entre sementes
+            roi_size = int(min(diag["spacing_x"], diag["spacing_y"]) * 0.9)
+            new_contours = list(contours)
+            for (cx, cy) in diag["undetected_slots"]:
+                c = retry_segment_slot(
+                    self.rgb_img, cx, cy,
+                    mode="rgb",
+                    roi_size=roi_size,
+                    threshold_factor=0.6,
+                    erosion=1,
+                    max_offset=roi_size // 3,
+                    verbose=True,
+                )
+                if c is not None:
+                    new_contours.append(c)
+            contours = tuple(new_contours)
+            centroids = calculate_centroids(contours)
+
+        # --- diagnóstico final (para o log de QC) ---
+        diag_final = diagnose_tray(self.rgb_img, contours, centroids, rgb_mask,
+                                    expected=expected, n_cols=cols, verbose=False)
+        self.diag = diag_final
+        if diag_final["status"] != "ok":
+            print(f"[AVISO] houve divergencia na qtde de sementes encontradas em relacao as esperadas: {len(contours)}/{expected}. Abortando...")
+            return
+
+        # --- reordenação com o conjunto final ---
+        ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
+
         contours_rx, _ = segmentation_rx(
-            self.rx_img, self.cfg, rotate=True, return_mask=True
+            self.rx_img, self.cfg, rotate=True
         )
         centroids_rx = calculate_centroids(contours_rx)
         ord_cen_rx, _ = ordenate_points(centroids_rx, contours_rx, cols)
@@ -42,7 +88,12 @@ class SegmentationPipeline:
         new_cen_rx = calculate_centroids(new_cnt_rx)
         ocen, _ = ordenate_points(new_cen_rx, new_cnt_rx, cols)
 
-        cap = int((self.SIZEX ** 2 + self.SIZEY ** 2) ** 0.5) // 2
+        if len(contours) > 0:
+            radii = [np.sqrt(cv2.contourArea(c) / np.pi) for c in contours]
+            real_radii = [r + self.cfg.rgb_erosion for r in radii]
+            cap = int(np.percentile(real_radii, 90) * 1.3)
+        else:
+            cap = 282
 
         self.cropped_rgb, self.cropped_hiper, self.masks_rgb = crop_seeds_centered(
             self.rgb_img, ord_cen_rgb, points,

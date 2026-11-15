@@ -1,11 +1,15 @@
 import cv2
 import numpy as np
 from .geometry import ordenate_points
+from skimage.feature import peak_local_max
+from skimage.segmentation import watershed
 
-def seed_mask_in_crop(crop, center_local, max_radius=None, mode="auto"):
+def seed_mask_in_crop(crop, center_local, max_radius=None, mode="auto",
+                      min_peak_distance=6, peak_threshold=3):
     if crop is None or crop.size == 0:
         return None
 
+    # ---- auto mode ----
     if mode == "auto":
         if crop.ndim == 2:
             mode = "rx"
@@ -23,23 +27,40 @@ def seed_mask_in_crop(crop, center_local, max_radius=None, mode="auto"):
     cx = int(np.clip(center_local[0], 0, feature.shape[1] - 1))
     cy = int(np.clip(center_local[1], 0, feature.shape[0] - 1))
 
-    _, bin_img = cv2.threshold(feature, 0, 255,
-                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
-    if mode == "rx" and bin_img[cy, cx] == 0:
-        bin_img = cv2.bitwise_not(bin_img)
+    # ---- threshold leve ----
+    _, binary = cv2.threshold(feature, 0, 255,
+                              cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    if mode == "rx" and binary[cy, cx] == 0:
+        binary = cv2.bitwise_not(binary)
+    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
 
-    bin_img = cv2.morphologyEx(bin_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    if binary[cy, cx] == 0:
+        cv2.circle(binary, (cx, cy), 2, 255, -1)
 
-    if bin_img[cy, cx] == 0:
-        cv2.circle(bin_img, (cx, cy), 2, 255, -1)
+    # ---- watershed ----
+    dist = cv2.distanceTransform(binary, cv2.DIST_L2, 5)
+    peaks = peak_local_max(dist, min_distance=min_peak_distance,
+                           threshold_abs=peak_threshold,
+                           exclude_border=False, labels=binary)
 
-    _, labels = cv2.connectedComponents(bin_img)
-    lbl = labels[cy, cx]
-    if lbl == 0:
-        return None
-    mask = ((labels == lbl) * 255).astype(np.uint8)
+    mask = None
+    if len(peaks) >= 1:
+        markers = np.zeros_like(binary, dtype=np.int32)
+        for k, (y, x) in enumerate(peaks, start=1):
+            markers[y, x] = k
+        labels = watershed(-dist, markers, mask=binary)
+        target = labels[cy, cx]
+        if target != 0:
+            mask = ((labels == target) * 255).astype(np.uint8)
 
+    if mask is None:
+        _, labels_cc = cv2.connectedComponents(binary)
+        lbl = labels_cc[cy, cx]
+        if lbl == 0:
+            return None
+        mask = ((labels_cc == lbl) * 255).astype(np.uint8)
+
+    # ---- cap de raio (opcional, agora realmente útil) ----
     if max_radius is not None:
         Y, X = np.ogrid[:mask.shape[0], :mask.shape[1]]
         cap = ((X - cx) ** 2 + (Y - cy) ** 2) <= max_radius ** 2

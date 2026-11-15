@@ -7,6 +7,7 @@ class PipelineConfig:
     crop_size: tuple = (64, 45)           # (SIZEX, SIZEY)
     columns_per_row: int = 5
     n_hyperspectral_bands: int = 150
+    expected_seeds: int = 50
 
     # Morphology radii
     rgb_erosion: int = 13

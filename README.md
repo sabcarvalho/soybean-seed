@@ -4,7 +4,7 @@
 
 As imagens brutas utilizadas neste trabalho **não podem ser divulgadas**
 devido a restrições institucionais. O código é publicado para fins de
-reprodutibilidade metodológica. Há dados fictícios anexos no diretório `data/mock` para testes.
+reprodutibilidade metodológica. Há dados fictícios anexos no diretório [`data/mock`](data/mock) para testes.
 
 ### Instalação
 
