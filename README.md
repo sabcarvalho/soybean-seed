@@ -1,5 +1,13 @@
 # Repositório do projeto FAPESP: Inteligência Artificial Explicável para a Classificação de Sementes de Soja.
 
+## Sobre o Projeto
+Este repositório contém os algoritmos, protocolos e scripts dos pipelines desenvolvidos no projeto de Iniciação Científica: Inteligência Artificial Explicável para a Classificação de Sementes de Soja. Financiado pela Fundação de Amparo à Pesquisa do Estado de São Paulo (FAPESP), de Outubro de 2024 a Setembro de 2025, sob a concessão número 2024/10564-3.
+
+Aluna: Sabrina Sousa Carvalho
+
+Orientador: Prof. Dr. Renato Tinós
+
+
 ### Disponibilidade de dados
 
 As imagens brutas utilizadas neste trabalho **não podem ser divulgadas**
