@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from .segmentation import segmentation_rgb, segmentation_rx, retry_segment_slot
 from .geometry import calculate_centroids, ordenate_points, homography
-from .cropping import crop_seeds_centered
+from .cropping import crop_seeds_centered, crop_seeds
 from .io_utils import anote_points
 from .diagnostic import diagnose_tray, split_merged_blob
 
@@ -75,7 +75,7 @@ class SegmentationPipeline:
         # --- reordenação com o conjunto final ---
         ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
 
-        contours_rx, _ = segmentation_rx(
+        contours_rx = segmentation_rx(
             self.rx_img, self.cfg, rotate=True
         )
         centroids_rx = calculate_centroids(contours_rx)
@@ -88,29 +88,36 @@ class SegmentationPipeline:
         new_cen_rx = calculate_centroids(new_cnt_rx)
         ocen, _ = ordenate_points(new_cen_rx, new_cnt_rx, cols)
 
-        if len(contours) > 0:
-            radii = [np.sqrt(cv2.contourArea(c) / np.pi) for c in contours]
-            real_radii = [r + self.cfg.rgb_erosion for r in radii]
-            cap = int(np.percentile(real_radii, 90) * 1.3)
-        else:
-            cap = 282
+        # if len(contours) > 0:
+        #     radii = [np.sqrt(cv2.contourArea(c) / np.pi) for c in contours]
+        #     real_radii = [r + self.cfg.rgb_erosion for r in radii]
+        #     cap = int(np.percentile(real_radii, 90) * 1.3)
+        # else:
+        #     cap = 282
+        # areas = [cv2.contourArea(c) for c in contours]
+        # median_area = float(np.median(areas)) if areas else None
 
-        self.cropped_rgb, self.cropped_hiper, self.masks_rgb = crop_seeds_centered(
-            self.rgb_img, ord_cen_rgb, points,
-            self.SIZEX, self.SIZEY,
-            hiper=self.hiper_imgs,
-            columns_per_row=cols,
-            max_radius=cap,
-            mask_mode="rgb"
-        )
-        self.cropped_rx, _, self.masks_rx = crop_seeds_centered(
-            new_rx, ocen, points,
-            self.SIZEX, self.SIZEY,
-            columns_per_row=cols,
-            max_radius=cap,
-            mask_mode="rx"
-        )
-
+        # self.cropped_rgb, self.cropped_hiper, self.masks_rgb = crop_seeds_centered(
+        #     self.rgb_img, ord_cen_rgb, points,
+        #     self.SIZEX, self.SIZEY,
+        #     hiper=self.hiper_imgs,
+        #     columns_per_row=cols,
+        #     max_radius=cap,
+        #     mask_mode="rgb",
+        #     median_area=median_area,
+        # )
+        # self.cropped_rx, _, self.masks_rx = crop_seeds_centered(
+        #     new_rx, ocen, points,
+        #     self.SIZEX, self.SIZEY,
+        #     columns_per_row=cols,
+        #     max_radius=cap,
+        #     mask_mode="rx",
+        #     median_area=median_area,
+        # )
+        self.cropped_rgb, self.cropped_rx, self.cropped_hiper = crop_seeds(self.rgb_img, ord_cen_rgb, 
+                                                                      new_rx, ocen, self.hiper_imgs, points, self.SIZEX, self.SIZEY)
+        self.masks_rgb = []
+        self.masks_rx = []
 
     def save_cropped_seeds(self, output_dir, image_id, alpha=False):
         rgb_dir  = os.path.join(output_dir, "RGB")
