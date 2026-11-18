@@ -4,10 +4,11 @@ from dataclasses import dataclass
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
+import sys
+from pathlib import Path
 
-_IMAGENET_MEAN = [0.485, 0.456, 0.406]
-_IMAGENET_STD = [0.229, 0.224, 0.225]
-
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from common.config import _IMAGENET_MEAN, _IMAGENET_STD
 
 @dataclass
 class ModelBundle:
@@ -56,7 +57,7 @@ def build_inception_v3(device, n_classes=4):
     model.fc = nn.Identity()
     head = nn.Sequential(
         nn.Dropout(p=0.5, inplace=False),
-        nn.Linear(2048, 1000, bias=True),
+        nn.Linear(2048, n_classes, bias=True),
     )
     return ModelBundle("inception_v3", model, _preprocess(299), head, 1)
 
@@ -64,7 +65,11 @@ def build_inception_v3(device, n_classes=4):
 def build_efficientnet_b0(device, n_classes=4):
     model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT).to(device)
     features = nn.Sequential(model.features, nn.AdaptiveAvgPool2d(1))
-    return ModelBundle("efficientnet", features, _preprocess(), model.classifier, 1)
+    head = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(1280, n_classes, bias=True),
+        )
+    return ModelBundle("efficientnet", features, _preprocess(), head, 1)
 
 
 def build_mobilenet_v3_large(device, n_classes=4):
@@ -72,7 +77,13 @@ def build_mobilenet_v3_large(device, n_classes=4):
         weights=models.MobileNet_V3_Large_Weights.DEFAULT
     ).to(device)
     features = nn.Sequential(model.features, nn.AdaptiveAvgPool2d(1))
-    return ModelBundle("mobilenet", features, _preprocess(), model.classifier, 0)
+    head =  nn.Sequential(
+                nn.Linear(in_features=960, out_features=1280, bias=True),
+                nn.Hardswish(),
+                nn.Dropout(p=0.2, inplace=True),
+                nn.Linear(in_features=1280, out_features=n_classes, bias=True),
+            )
+    return ModelBundle("mobilenet", features, _preprocess(), head, 0)
 
 
 MODEL_BUILDERS = {

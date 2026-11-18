@@ -8,8 +8,11 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.svm import SVC
+import sys
+from pathlib import Path
 
-from .config import CLASS_LABELS
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from common.classes import DISPLAY_LABELS_EN
 
 
 class Classifier:
@@ -33,10 +36,11 @@ class Classifier:
         )
         print(f"Scores per fold: {scores}")
         print(f"Mean Accuracy: {scores.mean():.3f} (+/- {scores.std() * 2:.3f})")
+        return scores
 
     def plot_confusion_matrix(self, y_true, y_pred):
         cm = confusion_matrix(y_true, y_pred)
-        disp = ConfusionMatrixDisplay(cm, display_labels=CLASS_LABELS)
+        disp = ConfusionMatrixDisplay(cm, display_labels=DISPLAY_LABELS_EN)
         disp.plot(cmap=plt.cm.Blues)
         plt.show()
 

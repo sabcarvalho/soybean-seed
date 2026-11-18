@@ -1,5 +1,5 @@
 """Fine-tuning e validação."""
-import copy
+import copy, time
 
 import numpy as np
 import torch
@@ -74,7 +74,7 @@ def _unfreeze_and_reoptimize(model, cfg):
 
 
 def cross_validate_finetune(dados, rotulos, build_model, cfg,
-                            checkpoint_dir, model_tag="model"):
+                            checkpoint_dir, model_tag="model", logger = None):
     """5-fold fine-tuning. Salva melhor checkpoint por fold."""
     import os
 
@@ -87,6 +87,7 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
     for fold, (tr_idx, va_idx) in enumerate(
         kfold.split(np.arange(len(dados)), rotulos)
     ):
+        
         print(f"\n{'=' * 30}\nIniciando Fold {fold + 1}\n{'=' * 30}")
 
         net = build_model().to(cfg.device)
@@ -110,9 +111,10 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
         optim = torch.optim.Adam(net.classifier.parameters(),
                                  lr=cfg.lr, weight_decay=cfg.weight_decay)
 
-        best_loss = float("inf")
-        best_state = None
+        best_loss, best_state = float("inf"), None
+        best_epoch = -1
         patience_counter = 0
+        fold_start = time.time()
 
         for epoch in range(cfg.epochs):
             print(f"\nÉpoca {epoch + 1}/{cfg.epochs}")
@@ -129,6 +131,7 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
             if va_loss < best_loss:
                 best_loss = va_loss
                 best_state = copy.deepcopy(net.state_dict())
+                best_epoch = epoch
                 patience_counter = 0
             else:
                 patience_counter += 1
@@ -136,6 +139,7 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
                       f"{cfg.early_stopping_patience}")
                 if patience_counter >= cfg.early_stopping_patience:
                     print("Early stopping.")
+                    early_stopped = True
                     break
 
         net.load_state_dict(best_state)
@@ -145,6 +149,18 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
         final_loss, final_acc, _, _ = validate(net, val_loader, criterion, cfg.device)
         score_acc.append(final_acc)
         score_loss.append(final_loss)
+        if logger is not None:
+            logger.add(
+                model=model_tag,
+                fold=fold + 1,
+                best_epoch=best_epoch + 1,
+                epochs_run=epoch + 1,
+                early_stopped=patience_counter >= cfg.early_stopping_patience,
+                best_val_loss=float(best_loss),
+                final_val_loss=float(final_loss),
+                final_val_acc=float(final_acc),
+                fold_duration_s=round(time.time() - fold_start, 1),
+            )
 
         del net, optim
         if torch.cuda.is_available():

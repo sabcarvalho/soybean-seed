@@ -1,76 +1,59 @@
 {
-  "data_dir": "data",
-  "output_dir": "output",
-  "file_templates": {
-    "rgb": "RIP2_{id}-RGB.tif",
-    "rx": "RIP2_{id}.bmp",
-    "bil": "RIP2_{id}.bil",
-    "hdr": "RIP2_{id}.bil.hdr",
-    "json": "RIP2_{id}-RGB.json"
+  "paths": {
+    "raw_data": "data/raw",
+    "cropped_labeled": "data/sementes_recortadas_anotadas",
+    "cropped_unlabeled": "data/sementes_recortadas",
+    "output": "output",
+    "checkpoints": "checkpoints"
   },
-  "labeled_ids":   [],
-  "unlabeled_ids": [],
-  "pipeline": {
-    "roi": [30, 600, 200, 650],
-    "crop_size": [64, 45],
-    "columns_per_row": 5,
-    "n_hyperspectral_bands": 150,
-    "rgb_erosion": 13,
-    "rgb_dilation": 3,
-    "rx_erosion": 5,
-    "rx_dilation": 2,
-    "min_circularity": 0.3,
-    "min_area": 0.3
-  },
-  "labeled_dir": "data/labeled",
-  "features_dir": "output/features",
-  "models": [
-    "vgg16",
-    "vgg19",
-    "resnet50",
-    "inception_v3",
-    "efficientnet_b0",
-    "mobilenet_v3_large"
-  ],
-  "torch_training": {
-    "epoch_num": 10,
-    "lr": 0.001,
-    "weight_decay": 0.008,
-    "batch_size": 20
-  },
-  "cv_folds": 5,
-  "random_state": 42,
-  "checkpoint_dir": "checkpoints",
-  "experiment_name": "exp1",
-  "seed": 42,
 
-  "fine_tuning": {
-    "epochs": 15,
-    "batch_size": 20,
-    "lr": 0.001,
-    "weight_decay": 0.008,
-    "cv_folds": 5,
-    "early_stopping_patience": 4,
-    "unfreeze_after_epoch": 5,
-    "unfreeze_lr_scale": 0.01
+  "common": {
+    "seed": 42
+  },
+
+  "segmentation": {
+    "file_templates": {
+      "rgb": "RIP2_{id}-RGB.tif",
+      "rx":  "RIP2_{id}.bmp",
+      "bil": "RIP2_{id}.bil",
+      "hdr": "RIP2_{id}.bil.hdr",
+      "json": "RIP2_{id}-RGB.json"
+    },
+    "discovery": { "enabled": true, "require": ["rgb","rx","bil","hdr"] },
+    "labeled_ids": [],
+    "unlabeled_ids": [],
+    "pipeline": {
+      "roi": [30, 600, 200, 650],
+      "crop_size": [64, 45],
+      "columns_per_row": 5,
+      "expected_seeds": 50,
+      "n_hyperspectral_bands": 150,
+      "rgb_erosion": 13, "rgb_dilation": 3,
+      "rx_erosion": 5, "rx_dilation": 2,
+      "min_circularity": 0.3, "min_area": 0.3
+    }
+  },
+
+  "classification": {
+    "models": ["vgg16","vgg19","resnet50","inception_v3","efficientnet_b0","mobilenet_v3_large"],
+    "features_dir": "output/features",
+    "torch_training": {
+      "epoch_num": 10, "lr": 0.001, "weight_decay": 0.008, "batch_size": 20
+    },
+    "cv_folds": 5
   },
 
   "xai": {
-    "vgg_checkpoint": "checkpoints/exp1/vgg19/",
-    "resnet_checkpoint": "checkpoints/exp1/resnet50/",
-    "test_samples": [
-      {
-        "rgb":   "data/labeled/RGB/bandeja_XXX_seed_XX_No Damage.png",
-        "rx":    "data/labeled/RX/bandeja_XXX_seed_XX_No Damage.png",
-        "hiper": "data/labeled/HIPER/bandeja_XXX_seed_XX.npy",
-        "label": 3
-      },
-      {
-        "rgb":   "data/labeled/RGB/bandeja_XXX_seed_XX_No Damage.png",
-        "rx":    "data/labeled/RX/bandeja_XXX_seed_XX_No Damage.png",
-        "hiper": "data/labeled/HIPER/bandeja_XXX_seed_XX.npy",
-        "label": 0
-      }
-    ]
+    "experiment_name": "exp1",
+    "training": {
+      "epochs": 15, "batch_size": 20, "lr": 0.001, "weight_decay": 0.008,
+      "cv_folds": 5, "early_stopping_patience": 4,
+      "unfreeze_after_epoch": 5, "unfreeze_lr_scale": 0.01
+    },
+    "checkpoints": {
+      "vgg19": "checkpoints/exp1/vgg19/vgg19_fold_{fold}.pth",
+      "resnet50": "checkpoints/exp1/resnet50/resnet50_fold_{fold}.pth"
+    },
+    "test_samples": []
   }
 }

@@ -1,7 +1,10 @@
 import torchvision.transforms as transforms
 
-_IMAGENET_MEAN = [0.485, 0.456, 0.406]
-_IMAGENET_STD = [0.229, 0.224, 0.225]
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from common.config import _IMAGENET_MEAN, _IMAGENET_STD
 
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),

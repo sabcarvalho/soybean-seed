@@ -12,21 +12,21 @@ from seed_segmentation.pipeline import SegmentationPipeline
 def main(config_path: str):
     with open(config_path) as f:
         cfg_json = json.load(f)
+    seg = cfg_json["segmentation"]
+    cfg = PipelineConfig(**seg.get("pipeline", {}))
+    templates = FileTemplates(**seg.get("file_templates", {}))
+    data_dir = cfg_json["paths"]["raw_data"]
+    output_dir = cfg_json["paths"]["output"]
 
-    cfg = PipelineConfig(**cfg_json.get("pipeline", {}))
-    templates = FileTemplates(**cfg_json.get("file_templates", {}))
-    data_dir = cfg_json["data_dir"]
-    output_dir = cfg_json["output_dir"]
-
-    disc = cfg_json.get("discovery", {})
+    disc = seg.get("discovery", {})
     if disc.get("enabled", True):
         labeled_ids, unlabeled_ids = discover_ids(
             data_dir, templates,
             require=tuple(disc.get("require", ("rgb", "rx", "bil", "hdr"))),
         )
     else:
-        labeled_ids = cfg_json.get("labeled_ids", [])
-        unlabeled_ids = cfg_json.get("unlabeled_ids", [])
+        labeled_ids = seg.get("labeled_ids", [])
+        unlabeled_ids = seg.get("unlabeled_ids", [])
 
     labeled_set = set(labeled_ids)
     all_ids = [(i, True) for i in labeled_ids] + \

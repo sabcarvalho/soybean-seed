@@ -7,8 +7,9 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from seed_classification.config import TorchTrainingConfig
+from common.config import TrainConfig
 from common.data import create_paths
+from common.logger import ResultsLogger
 from seed_classification.evaluation import (
     evaluate_sklearn_models, evaluate_torch_models,
 )
@@ -23,39 +24,57 @@ def main(config_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    tc = cfg_json.get("torch_training", {})
-    train_cfg = TorchTrainingConfig(
-        epoch_num=tc.get("epoch_num", 10),
-        lr=tc.get("lr", 1e-3),
-        weight_decay=tc.get("weight_decay", 8e-3),
-        batch_size=tc.get("batch_size", 20),
-        cv_folds=cfg_json.get("cv_folds", 5),
-        random_state=cfg_json.get("random_state", 42),
+    logger = ResultsLogger(
+        experiment_name=cfg_json["xai"]["experiment_name"],
+        output_dir=cfg_json["paths"]["output"],
+        config=cfg_json,
+        seed=cfg_json["common"]["seed"],
+    )
+
+    tc = cfg_json.get("classification", {})
+    train_cfg = TrainConfig(
+        epochs=tc["torch_training"].get("epoch_num", 10),
+        lr=tc["torch_training"].get("lr", 1e-3),
+        weight_decay=tc["torch_training"].get("weight_decay", 8e-3),
+        batch_size=tc["torch_training"].get("batch_size", 20),
+        cv_folds=tc.get("cv_folds", 5),
+        random_state=cfg_json["common"]["seed"],
         device=device,
     )
 
-    path_data, labels = create_paths(cfg_json["labeled_dir"], is_labeled=True)
+    path_data, labels = create_paths(cfg_json["paths"]["cropped_labeled"], is_labeled=True)
     print(f"Total de sementes anotadas: {len(path_data)}")
     print(f"Distribuição de classes: {dict(zip(*__import__('numpy').unique(labels, return_counts=True)))}")
 
-    for model_name in cfg_json.get("models", []):
+    for model_name in cfg_json["classification"].get("models", []):
         print(f"\n\n########## Modelo: {model_name} ##########\n")
         bundle = build_model(model_name, device)
 
         extractor = Extractor(
             name=bundle.name,
-            output_dir=cfg_json["features_dir"],
+            output_dir=cfg_json["classification"]["features_dir"],
             extractor=bundle.feature_extractor,
             preprocess=bundle.preprocess,
             device=device,
         )
         extractor.run(path_data)
 
-        evaluate_sklearn_models(extractor, labels, train_cfg)
-        evaluate_torch_models(
-            extractor, labels, bundle.classifier_head,
-            bundle.classifier_index, train_cfg,
-        )
+        evaluate_sklearn_models(extractor, labels, train_cfg,
+                                 model_name=bundle.name, logger=logger)
+        evaluate_torch_models(extractor, labels, bundle.classifier_head,
+                              bundle.classifier_index, train_cfg,
+                              model_name=bundle.name, logger=logger)
+
+     # Tabela cruzada (modelo x features) pronta pro artigo
+    logger.finalize(
+        also_latex=True,
+        latex_pivot={
+            "row_field": "model",
+            "col_field": "features",
+            "caption": "Acurácia média (± desvio) por modelo e conjunto de features",
+            "label": "tab:classification_results",
+        },
+    )
 
 
 if __name__ == "__main__":

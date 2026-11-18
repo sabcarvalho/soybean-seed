@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from common.config import TrainConfig
 from common.seed import set_seed
+from common.logger import ResultsLogger
 from common.data import create_paths
 from seed_xai.models import ThreeStreamResNet50, TwoStreamVGG19
 from seed_xai.training import cross_validate_finetune
@@ -21,22 +22,40 @@ MODEL_BUILDERS = {
 def main(config_path):
     with open(config_path) as f:
         cfg = json.load(f)
-    tc = TrainConfig(**cfg.get("fine_tuning", {}))
-    set_seed(cfg.get("seed", 42))
+    tc = TrainConfig(**cfg["xai"]["training"])
+    set_seed(cfg["common"]["seed"])
 
-    dados, rotulos = create_paths(cfg["labeled_dir"], is_labeled=True)
+    logger = ResultsLogger(
+        experiment_name=cfg["xai"]["experiment_name"],
+        output_dir=cfg["paths"]["output"],
+        config=cfg, seed=cfg.get("seed", 42),
+    )
+
+    dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
     print(f"Total de sementes: {len(dados)}")
 
     for model_name, build in MODEL_BUILDERS.items():
         out_dir = os.path.join(
-            cfg["checkpoint_dir"],
-            cfg.get("experiment_name", "exp1"),
+            cfg["paths"]["checkpoint"],
+            cfg["xai"]["experiment_name"],
             model_name,
         )
         print(f"\n### {model_name} → {out_dir}")
         cross_validate_finetune(dados, rotulos, build, tc,
-                                checkpoint_dir=out_dir,
-                                model_tag=model_name)
+                                 checkpoint_dir=out_dir,
+                                 model_tag=model_name,
+                                 logger=logger)
+    logger.finalize(
+        also_latex=True,
+        latex_pivot={
+            "row_field": "model",
+            "col_field": "fold",
+            "mean_field": "final_val_acc",
+            "std_field": "fold_duration_s",  # ou omitir
+            "caption": "Acurácia de validação por fold",
+            "label": "tab:finetune_folds",
+        },
+    )
 
 
 if __name__ == "__main__":

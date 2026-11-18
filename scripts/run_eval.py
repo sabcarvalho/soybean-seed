@@ -15,12 +15,12 @@ from seed_xai.models import ThreeStreamResNet50, TwoStreamVGG19
 def main(config_path):
     with open(config_path) as f:
         cfg = json.load(f)
-    tc = TrainConfig(**cfg.get("fine_tuning", {}))
-    set_seed(cfg.get("seed", 42))
+    tc = TrainConfig(**cfg["xai"]["training"])
+    set_seed(cfg["common"]["seed"])
 
-    dados, rotulos = create_paths(cfg["labeled_dir"], is_labeled=True)
-    base = os.path.join(cfg["checkpoint_dir"],
-                        cfg.get("experiment_name", "exp1"))
+    dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
+    base = os.path.join(cfg["paths"]["checkpoint"],
+                        cfg["xai"]["experiment_name"])
 
     evaluate_folds(
         dados, rotulos,

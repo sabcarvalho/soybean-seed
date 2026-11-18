@@ -125,33 +125,24 @@ def crop_seeds_centered(img, centroids, points, size_x, size_y, hiper=None,
 
 def crop_seeds(img_rgb, centroids_rgb,
                img_rx, centroids_rx,
-               hiper, points, sizeX, sizeY):
-  cropped_rgb = []
-  cropped_rx = []
-  cropped_hiper = []
-  halfX = sizeX // 2
-  halfY = sizeY // 2
+               hiper, points, size_x, size_y,):
+  cropped_rgb,cropped_rx, cropped_hiper  = [], [], []
+  half_x, half_y = size_x // 2, size_y // 2
 
   img_rx = cv2.cvtColor(img_rx, cv2.COLOR_BGR2GRAY)
 
   if points is not None:
-    points_ordenated = ordenate_points(points)
+    points_ordered = ordenate_points(points)
 
   for i, cent in enumerate(centroids_rgb):
-    x0 = int(cent[0]-halfX)
-    x1 = int(cent[0]+halfX)
-
-    y0 = int(cent[1]-halfY)
-    y1 = int(cent[1]+halfY)
+    x0, x1 = int(cent[0] - half_x), int(cent[0] + half_x)
+    y0, y1 = int(cent[1] - half_y), int(cent[1] + half_y)
 
     seed_rgb = img_rgb[y0:y1, x0:x1]
     hp = hiper[:, y0:y1, x0:x1]
 
-    x0 = int(centroids_rx[i][0]-halfX)
-    x1 = int(centroids_rx[i][0]+halfX)
-
-    y0 = int(centroids_rx[i][1]-halfY)
-    y1 = int(centroids_rx[i][1]+halfY)
+    x0, x1 = int(centroids_rx[i][0] - half_x), int(centroids_rx[i][0] + half_x)
+    y0, y1 = int(centroids_rx[i][1] - half_y), int(centroids_rx[i][1] + half_y)
 
     seed_rx = img_rx[y0:y1, x0:x1]
     mask = calculate_morphology(1,5,seed_rx, 1)
@@ -161,14 +152,11 @@ def crop_seeds(img_rgb, centroids_rgb,
 
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
     seed_rgb = seed_rgb * mask
-    
 
-    if points is not None:
-      seed_rgb = [seed_rgb, points_ordenated[i][1]]
-      seed_rx = [seed_rx, points_ordenated[i][1]]
-    else:
-      seed_rgb = [seed_rgb, ""]
-      seed_rx = [seed_rx, ""]
+    label = points_ordered[i][1] if points is not None else ""
+
+    seed_rgb = [seed_rgb, label]
+    seed_rx = [seed_rx, label]
       
     cropped_rgb.append(seed_rgb)
     cropped_rx.append(seed_rx)

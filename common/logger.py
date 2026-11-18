@@ -65,13 +65,6 @@ class ResultsLogger:
             meta["cuda_version"] = torch.version.cuda
             if torch.cuda.is_available():
                 meta["gpu_name"] = torch.cuda.get_device_name(0)
-        try:
-            import git
-            repo = git.Repo(search_parent_directories=True)
-            meta["git_commit"] = repo.head.object.hexsha[:8]
-            meta["git_dirty"] = repo.is_dirty()
-        except Exception:
-            pass
         return meta
 
     # ------------------------------------------------------------------ #
@@ -150,7 +143,7 @@ class ResultsLogger:
 
     # ------------------------------------------------------------------ #
     def _write_latex(self, pivot_cfg: dict) -> None:
-        """Se `pivot_cfg` for passado, gera tabela cruzada (model × feature).
+        """Se `pivot_cfg` for passado, gera tabela cruzada (model x feature).
         Senão, tabela simples (todas as linhas)."""
         if pivot_cfg:
             tex = latex_pivot(self.rows, **pivot_cfg)
