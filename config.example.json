@@ -39,5 +39,38 @@
     "batch_size": 20
   },
   "cv_folds": 5,
-  "random_state": 42
+  "random_state": 42,
+  "checkpoint_dir": "checkpoints",
+  "experiment_name": "exp1",
+  "seed": 42,
+
+  "fine_tuning": {
+    "epochs": 15,
+    "batch_size": 20,
+    "lr": 0.001,
+    "weight_decay": 0.008,
+    "cv_folds": 5,
+    "early_stopping_patience": 4,
+    "unfreeze_after_epoch": 5,
+    "unfreeze_lr_scale": 0.01
+  },
+
+  "xai": {
+    "vgg_checkpoint": "checkpoints/exp1/vgg19/",
+    "resnet_checkpoint": "checkpoints/exp1/resnet50/",
+    "test_samples": [
+      {
+        "rgb":   "data/labeled/RGB/bandeja_XXX_seed_XX_No Damage.png",
+        "rx":    "data/labeled/RX/bandeja_XXX_seed_XX_No Damage.png",
+        "hiper": "data/labeled/HIPER/bandeja_XXX_seed_XX.npy",
+        "label": 3
+      },
+      {
+        "rgb":   "data/labeled/RGB/bandeja_XXX_seed_XX_No Damage.png",
+        "rx":    "data/labeled/RX/bandeja_XXX_seed_XX_No Damage.png",
+        "hiper": "data/labeled/HIPER/bandeja_XXX_seed_XX.npy",
+        "label": 0
+      }
+    ]
+  }
 }

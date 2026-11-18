@@ -1,0 +1,157 @@
+"""Fine-tuning e validação."""
+import copy
+
+import numpy as np
+import torch
+from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import DataLoader
+
+from .data import PairedDataset
+from .transforms import train_transform, val_transform
+
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device):
+    model.train()
+    running_loss, correct, total = 0.0, 0, 0
+
+    for k, batch in enumerate(dataloader):
+        print("\r--{0}/{1}--".format(k, len(dataloader)), end="", flush=True)
+        *inputs, labels = batch
+        inputs = [t.to(device) for t in inputs]
+        labels = labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(*inputs)
+        loss = criterion(outputs, labels)
+        running_loss += loss.item() * labels.size(0)
+
+        loss.backward()
+        optimizer.step()
+
+        _, preds = torch.max(outputs, dim=1)
+        correct += torch.sum(preds == labels).item()
+        total += labels.size(0)
+
+    return running_loss / total, correct / total
+
+
+def validate(model, dataloader, criterion, device):
+    model.eval()
+    running_loss, correct, total = 0.0, 0, 0
+    all_preds, all_targets = [], []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            *inputs, labels = batch
+            inputs = [t.to(device) for t in inputs]
+            labels = labels.to(device)
+
+            outputs = model(*inputs)
+            running_loss += criterion(outputs, labels).item() * labels.size(0)
+
+            _, pred = torch.max(outputs, dim=1)
+            all_preds.extend(pred.cpu().numpy())
+            all_targets.extend(labels.cpu().numpy())
+            correct += torch.sum(pred == labels).item()
+            total += labels.size(0)
+
+    return (running_loss / total, correct / total,
+            np.array(all_targets), np.array(all_preds))
+
+
+def _unfreeze_and_reoptimize(model, cfg):
+    for p in model.encoder_rgb.parameters():
+        p.requires_grad = True
+    for p in model.encoder_rx.parameters():
+        p.requires_grad = True
+
+    params = [
+        {"params": model.encoder_rgb.parameters(), "lr": cfg.lr * cfg.unfreeze_lr_scale},
+        {"params": model.encoder_rx.parameters(), "lr": cfg.lr * cfg.unfreeze_lr_scale},
+        {"params": model.classifier.parameters(), "lr": cfg.lr},
+    ]
+    return torch.optim.Adam(params, weight_decay=cfg.weight_decay)
+
+
+def cross_validate_finetune(dados, rotulos, build_model, cfg,
+                            checkpoint_dir, model_tag="model"):
+    """5-fold fine-tuning. Salva melhor checkpoint por fold."""
+    import os
+
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    kfold = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,
+                            random_state=42)
+    score_acc, score_loss = [], []
+    criterion = torch.nn.CrossEntropyLoss().to(cfg.device)
+
+    for fold, (tr_idx, va_idx) in enumerate(
+        kfold.split(np.arange(len(dados)), rotulos)
+    ):
+        print(f"\n{'=' * 30}\nIniciando Fold {fold + 1}\n{'=' * 30}")
+
+        net = build_model().to(cfg.device)
+        train_data = [dados[i] for i in tr_idx]
+        val_data = [dados[i] for i in va_idx]
+
+        train_loader = DataLoader(
+            PairedDataset(train_data, rotulos[tr_idx], train_transform),
+            batch_size=cfg.batch_size, shuffle=True,
+        )
+        val_loader = DataLoader(
+            PairedDataset(val_data, rotulos[va_idx], val_transform),
+            batch_size=cfg.batch_size, shuffle=False,
+        )
+
+        for p in net.encoder_rgb.parameters():
+            p.requires_grad = False
+        for p in net.encoder_rx.parameters():
+            p.requires_grad = False
+
+        optim = torch.optim.Adam(net.classifier.parameters(),
+                                 lr=cfg.lr, weight_decay=cfg.weight_decay)
+
+        best_loss = float("inf")
+        best_state = None
+        patience_counter = 0
+
+        for epoch in range(cfg.epochs):
+            print(f"\nÉpoca {epoch + 1}/{cfg.epochs}")
+            if epoch == cfg.unfreeze_after_epoch:
+                print(">>> Descongelando encoders com LR reduzida...")
+                optim = _unfreeze_and_reoptimize(net, cfg)
+
+            tr_loss, tr_acc = train_one_epoch(
+                net, train_loader, optim, criterion, cfg.device)
+            va_loss, va_acc, _, _ = validate(net, val_loader, criterion, cfg.device)
+            print(f"\nTrain - Loss: {tr_loss:.4f}, Acc: {tr_acc:.4f}")
+            print(f"Val   - Loss: {va_loss:.4f}, Acc: {va_acc:.4f}")
+
+            if va_loss < best_loss:
+                best_loss = va_loss
+                best_state = copy.deepcopy(net.state_dict())
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                print(f"Alerta: Paciência {patience_counter}/"
+                      f"{cfg.early_stopping_patience}")
+                if patience_counter >= cfg.early_stopping_patience:
+                    print("Early stopping.")
+                    break
+
+        net.load_state_dict(best_state)
+        torch.save(net.state_dict(),
+                   os.path.join(checkpoint_dir, f"{model_tag}_fold_{fold}.pth"))
+
+        final_loss, final_acc, _, _ = validate(net, val_loader, criterion, cfg.device)
+        score_acc.append(final_acc)
+        score_loss.append(final_loss)
+
+        del net, optim
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    print(f"\n{'-' * 30}\nResultado da Validação Cruzada:")
+    print(f"Média Acurácia: {np.mean(score_acc):.4f} "
+          f"+/- {np.std(score_acc):.4f}")
+    print(f"Média Loss: {np.mean(score_loss):.4f} "
+          f"+/- {np.std(score_loss):.4f}")

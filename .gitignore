@@ -12,7 +12,6 @@ output/
 !config.example.json
 !data/mock/RIP2_011-RGB.tif
 !data/mock/RIP2_011.bmp
-generate_mock_hyper.py
 # Python
 __pycache__/
 *.py[cod]

@@ -106,3 +106,42 @@ scripts/               # entry points
 data/                  # entrada (não versionada)
 output/                # features cacheadas (não versionadas)
 ```
+
+# Seed XAI
+
+Interpretabilidade (Grad-CAM) de classificadores multi-modais de
+sementes de soja (RGB + RX + hiperespectral), treinados com
+fine-tuning de redes pré-treinadas.
+
+> ⚠️ **Os dados originais não estão disponíveis neste repositório.**
+> Veja [`data/README.md`](data/README.md).
+
+## Modelos
+
+| Modelo | Streams | Cabeça |
+|---|---|---|
+| **TwoStreamVGG19** | RGB + RX | 3 camadas densas (2×4096 → 4) |
+| **ThreeStreamResNet50** | RGB + RX + hiper (média por banda) | Linear (4608 → 4) |
+
+## Pipeline
+
+1. **Fine-tuning 5-fold** com congelamento progressivo:
+   - Épocas 0-4: encoders congelados, só o classificador treina.
+   - Época 5+: encoders descongelados com LR reduzida (`lr × 0.01`).
+   - Early stopping por paciência na loss de validação.
+   - Checkpoint do melhor estado por fold.
+2. **Avaliação final** por fold + matriz de confusão agregada.
+3. **Grad-CAM**: para cada par `(real, predito)`, escolhe um exemplo
+   e gera o heatmap sobre a via RGB **e** a via RX, montando uma
+   matriz 4×4 análoga à matriz de confusão.
+
+## Uso
+
+```bash
+cp config.example.json config.json
+# edite config.json (paths, epochs, test_samples...)
+
+python scripts/run_finetune.py --config config.json
+python scripts/run_eval.py --config config.json
+python scripts/run_xai_matrix.py --config config.json
+```

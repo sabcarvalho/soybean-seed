@@ -9,9 +9,10 @@ from .torch_training import do_cross_val_torch, reset_weights
 
 
 def _train_sklearn(classifiers, data, labels, title, cv_folds, random_state):
-    print("\n============================================")
-    print(f"==============Treinando com {title}=============")
-    print("============================================")
+    title = f"==============Treinando com {title}============="
+    print("\n" + "="*len(title))
+    print(title)
+    print("="*len(title))
     for name, clf in classifiers:
         print(name)
         clf.cross_val(data, labels, cv_folds=cv_folds, random_state=random_state)
@@ -20,7 +21,7 @@ def _train_sklearn(classifiers, data, labels, title, cv_folds, random_state):
 
 def evaluate_sklearn_models(data_extracted, labels, cfg):
     classifiers = [
-        ("SVM", SupportVectorMachine()),
+        ("SVM", SupportVectorMachine(random_state=cfg.random_state)),
         ("Random Forest", RandomForest(random_state=cfg.random_state)),
         ("XGBoost", XGBoost(n_classes=len(set(labels)), random_state=cfg.random_state)),
     ]

@@ -87,64 +87,23 @@ class SegmentationPipeline:
         new_cnt_rx = segmentation_rx(new_rx, self.cfg, rotate=False)
         new_cen_rx = calculate_centroids(new_cnt_rx)
         ocen, _ = ordenate_points(new_cen_rx, new_cnt_rx, cols)
-
-        # if len(contours) > 0:
-        #     radii = [np.sqrt(cv2.contourArea(c) / np.pi) for c in contours]
-        #     real_radii = [r + self.cfg.rgb_erosion for r in radii]
-        #     cap = int(np.percentile(real_radii, 90) * 1.3)
-        # else:
-        #     cap = 282
-        # areas = [cv2.contourArea(c) for c in contours]
-        # median_area = float(np.median(areas)) if areas else None
-
-        # self.cropped_rgb, self.cropped_hiper, self.masks_rgb = crop_seeds_centered(
-        #     self.rgb_img, ord_cen_rgb, points,
-        #     self.SIZEX, self.SIZEY,
-        #     hiper=self.hiper_imgs,
-        #     columns_per_row=cols,
-        #     max_radius=cap,
-        #     mask_mode="rgb",
-        #     median_area=median_area,
-        # )
-        # self.cropped_rx, _, self.masks_rx = crop_seeds_centered(
-        #     new_rx, ocen, points,
-        #     self.SIZEX, self.SIZEY,
-        #     columns_per_row=cols,
-        #     max_radius=cap,
-        #     mask_mode="rx",
-        #     median_area=median_area,
-        # )
         self.cropped_rgb, self.cropped_rx, self.cropped_hiper = crop_seeds(self.rgb_img, ord_cen_rgb, 
                                                                       new_rx, ocen, self.hiper_imgs, points, self.SIZEX, self.SIZEY)
-        self.masks_rgb = []
-        self.masks_rx = []
 
-    def save_cropped_seeds(self, output_dir, image_id, alpha=False):
-        rgb_dir  = os.path.join(output_dir, "RGB")
-        rx_dir   = os.path.join(output_dir, "RX")
+    def save_cropped_seeds(self, output_dir, image_id):
+        rgb_dir = os.path.join(output_dir, "RGB")
+        rx_dir = os.path.join(output_dir, "RX")
         hiper_dir = os.path.join(output_dir, "HIPER")
         for d in (rgb_dir, rx_dir, hiper_dir):
             os.makedirs(d, exist_ok=True)
 
         for n, seed in enumerate(self.cropped_rgb):
             name = f"{image_id}_seed_{n:02d}_{seed[1]}.png"
-            img_rgb = seed[0]
-            mask_rgb = self.masks_rgb[n] if n < len(self.masks_rgb) else None
-
-            if alpha and mask_rgb is not None:
-                out = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2BGRA)
-                out[:, :, 3] = mask_rgb
-                cv2.imwrite(os.path.join(rgb_dir, name), out)
-            else:
-                cv2.imwrite(os.path.join(rgb_dir, name), img_rgb)
+            if isinstance(seed[0], np.ndarray):
+                cv2.imwrite(os.path.join(rgb_dir, name), seed[0])
 
             rx = self.cropped_rx[n][0]
-            mask_rx = self.masks_rx[n] if n < len(self.masks_rx) else None
-            if alpha and mask_rx is not None:
-                out = cv2.cvtColor(rx, cv2.COLOR_BGR2BGRA)
-                out[:, :, 3] = mask_rx
-                cv2.imwrite(os.path.join(rx_dir, name), out)
-            else:
+            if isinstance(rx, np.ndarray):
                 cv2.imwrite(os.path.join(rx_dir, name), rx)
 
             if self.cropped_hiper is not None and n < len(self.cropped_hiper):

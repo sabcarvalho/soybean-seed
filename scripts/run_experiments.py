@@ -2,10 +2,13 @@
 import argparse
 import json
 
-import torch
+import torch, sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from seed_classification.config import TorchTrainingConfig
-from seed_classification.data import create_paths
+from common.data import create_paths
 from seed_classification.evaluation import (
     evaluate_sklearn_models, evaluate_torch_models,
 )

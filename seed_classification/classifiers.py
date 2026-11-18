@@ -1,6 +1,7 @@
 """Sklearn-based classifiers (SVM, RF, XGBoost)."""
 import matplotlib.pyplot as plt
 import xgboost as xgb
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     ConfusionMatrixDisplay, classification_report, confusion_matrix,
@@ -41,8 +42,8 @@ class Classifier:
 
 
 class SupportVectorMachine(Classifier):
-    def __init__(self):
-        self.model = SVC(kernel="linear", probability=True)
+    def __init__(self, random_state=42):
+        self.model = SVC(kernel="linear", random_state=random_state)
 
 
 class RandomForest(Classifier):

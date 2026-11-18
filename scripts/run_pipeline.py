@@ -39,7 +39,11 @@ def main(config_path: str):
                 n_bands=cfg.n_hyperspectral_bands, load_json=is_labeled)
             pipe = SegmentationPipeline(data, cfg)
             pipe.run()
-            pipe.save_cropped_seeds(output_dir, f"bandeja_{image_id}")
+            if is_labeled: 
+                dir = output_dir + "\\labeled"
+            else:
+                dir = output_dir + "\\unlabeled"
+            pipe.save_cropped_seeds(dir, f"bandeja_{image_id}")
         except Exception as e:
             print(f"[ERRO] {image_id}: {e}")
 
