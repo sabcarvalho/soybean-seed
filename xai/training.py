@@ -73,7 +73,7 @@ def _unfreeze_and_reoptimize(model, cfg):
     return torch.optim.Adam(params, weight_decay=cfg.weight_decay)
 
 
-def cross_validate_finetune(dados, rotulos, build_model, cfg,
+def cross_validate_finetune(dados, rotulos, build_model, streams, cfg,
                             checkpoint_dir, model_tag="model", logger = None):
     """5-fold fine-tuning. Salva melhor checkpoint por fold."""
     import os
@@ -95,11 +95,11 @@ def cross_validate_finetune(dados, rotulos, build_model, cfg,
         val_data = [dados[i] for i in va_idx]
 
         train_loader = DataLoader(
-            PairedDataset(train_data, rotulos[tr_idx], train_transform),
+            PairedDataset(train_data, rotulos[tr_idx], train_transform, streams),
             batch_size=cfg.batch_size, shuffle=True,
         )
         val_loader = DataLoader(
-            PairedDataset(val_data, rotulos[va_idx], val_transform),
+            PairedDataset(val_data, rotulos[va_idx], val_transform, streams),
             batch_size=cfg.batch_size, shuffle=False,
         )
 

@@ -9,10 +9,10 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from common.config import TrainConfig
 from common.seed import set_seed
 from common.data import PairedDataset, create_paths
-from seed_xai.io_utils import load_checkpoint
-from seed_xai.models import ThreeStreamResNet50, TwoStreamVGG19
-from seed_xai.transforms import val_transform
-from seed_xai.xai import coletar_exemplos_matriz, plotar_matriz_gradcam
+from xai.io_utils import load_checkpoint
+from xai.models import ThreeStreamResNet50, TwoStreamVGG19
+from xai.transforms import val_transform
+from xai.xai import coletar_exemplos_matriz, plotar_matriz_gradcam
 
 # Nome dos streams por modelo (usado para puxar o caminho certo em dataset.dados)
 STREAM_KEYS_2 = ("rgb", "rx")

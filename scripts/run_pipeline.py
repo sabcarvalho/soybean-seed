@@ -4,9 +4,9 @@ import json, sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from seed_segmentation.config import PipelineConfig, FileTemplates
-from seed_segmentation.io_utils import discover_ids, read_seed_entry
-from seed_segmentation.pipeline import SegmentationPipeline
+from segmentation.config import PipelineConfig, FileTemplates
+from segmentation.io_utils import discover_ids, read_seed_entry
+from segmentation.pipeline import SegmentationPipeline
 
 
 def main(config_path: str):

@@ -8,8 +8,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from common.config import TrainConfig
 from common.seed import set_seed
 from common.data import create_paths
-from seed_xai.evaluation import evaluate_folds
-from seed_xai.models import ThreeStreamResNet50, TwoStreamVGG19
+from xai.evaluation import evaluate_folds
+from xai.models import ThreeStreamResNet50, TwoStreamVGG19
 
 
 def main(config_path):

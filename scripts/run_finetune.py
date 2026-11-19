@@ -9,13 +9,13 @@ from common.config import TrainConfig
 from common.seed import set_seed
 from common.logger import ResultsLogger
 from common.data import create_paths
-from seed_xai.models import ThreeStreamResNet50, TwoStreamVGG19
-from seed_xai.training import cross_validate_finetune
+from xai.models import ThreeStreamResNet50, TwoStreamVGG19
+from xai.training import cross_validate_finetune
 
 
 MODEL_BUILDERS = {
-    "vgg19": lambda: TwoStreamVGG19(num_classes=4),
-    "resnet50": lambda: ThreeStreamResNet50(num_classes=4),
+    "vgg19": (lambda: TwoStreamVGG19(num_classes=4), 2),
+    "resnet50": (lambda: ThreeStreamResNet50(num_classes=4), 3),
 }
 
 
@@ -34,14 +34,14 @@ def main(config_path):
     dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
     print(f"Total de sementes: {len(dados)}")
 
-    for model_name, build in MODEL_BUILDERS.items():
+    for model_name, (build, streams) in MODEL_BUILDERS.items():
         out_dir = os.path.join(
-            cfg["paths"]["checkpoint"],
+            cfg["paths"]["checkpoints"],
             cfg["xai"]["experiment_name"],
             model_name,
         )
         print(f"\n### {model_name} → {out_dir}")
-        cross_validate_finetune(dados, rotulos, build, tc,
+        cross_validate_finetune(dados, rotulos, build, streams, tc,
                                  checkpoint_dir=out_dir,
                                  model_tag=model_name,
                                  logger=logger)

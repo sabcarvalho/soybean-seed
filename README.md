@@ -68,9 +68,6 @@ extraídas de três modalidades (RGB, raio-X e hiperespectral) usando
 redes pré-treinadas do `torchvision`, com comparação entre
 SVM, Random Forest, XGBoost e cabeças neurais.
 
-> ⚠️ **Os dados originais não estão disponíveis neste repositório.**
-> Veja [`data/README.md`](data/README.md) para o formato esperado.
-
 ### Pipeline
 
 1. **Extração de features** — cada semente é processada por uma CNN
@@ -112,9 +109,6 @@ output/                # features cacheadas (não versionadas)
 Interpretabilidade (Grad-CAM) de classificadores multi-modais de
 sementes de soja (RGB + RX + hiperespectral), treinados com
 fine-tuning de redes pré-treinadas.
-
-> ⚠️ **Os dados originais não estão disponíveis neste repositório.**
-> Veja [`data/README.md`](data/README.md).
 
 ## Modelos
 

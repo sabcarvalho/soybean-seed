@@ -65,7 +65,7 @@ def do_cross_val_torch(data, labels, net, cfg):
     for fold, (tr, va) in enumerate(
         kfold.split(np.arange(len(dataset)), labels)
     ):
-        print(f"\nFold {fold + 1}")
+        print(f"\rFold {fold + 1}",end="\r", flush=True)
         train_loader = DataLoader(
             Subset(dataset, tr), batch_size=cfg.batch_size, shuffle=True
         )
@@ -74,13 +74,14 @@ def do_cross_val_torch(data, labels, net, cfg):
         )
         optimizer = make_optimizer(net, cfg.lr, cfg.weight_decay)
 
-        for _ in range(cfg.epoch_num):
+        for _ in range(cfg.epochs):
             _epoch_loop(train_loader, net, criterion, optimizer, device, True)
 
         acc, loss = _epoch_loop(val_loader, net, criterion, None, device, False)
         score_acc.append(acc)
         score_loss.append(loss)
+        print(f"\r",end="\r", flush=True)
 
     print(f"\nAvg accuracy: {np.mean(score_acc)}")
     print(f"Avg loss std: {np.std(score_loss)}")
-    return float(np.mean(score_acc)), float(np.std(score_loss))
+    return np.array(score_acc), np.array(score_loss)

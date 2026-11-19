@@ -10,10 +10,11 @@ from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 
 class PairedDataset(Dataset):
-    def __init__(self, dados, labels, transform):
+    def __init__(self, dados, labels, transform, streams = 3):
         self.dados = dados
         self.labels = torch.tensor(labels, dtype=torch.long)
         self.transform = transform
+        self.streams = streams
 
     def __len__(self):
         return len(self.dados)
@@ -42,7 +43,7 @@ class PairedDataset(Dataset):
         tensor_rx = self.transform(pil_rx)
 
         # 3º stream opcional: se o caminho existe e o .npy foi carregado
-        if "hiper" in caminhos and os.path.exists(caminhos["hiper"]):
+        if self.streams == 3:
             tensor_hiper = self._load_hiper(caminhos["hiper"])
             return tensor_rgb, tensor_rx, tensor_hiper, self.labels[idx]
 

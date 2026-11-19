@@ -51,7 +51,7 @@ def evaluate_sklearn_models(data_extracted, labels, cfg,
 
 def _run_torch_and_log(classifier, data, labels, feature_name,
                        model_name, cfg, logger):
-    title = f"==============Treinando com {title}============="
+    title = f"==============Treinando com {feature_name}============="
     print("\n" + "="*len(title))
     print(title)
     print("="*len(title))

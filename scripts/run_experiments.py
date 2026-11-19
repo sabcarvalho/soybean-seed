@@ -10,11 +10,11 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from common.config import TrainConfig
 from common.data import create_paths
 from common.logger import ResultsLogger
-from seed_classification.evaluation import (
+from classification.evaluation import (
     evaluate_sklearn_models, evaluate_torch_models,
 )
-from seed_classification.feature_extraction import Extractor
-from seed_classification.models import build_model
+from classification.feature_extraction import Extractor
+from classification.models import build_model
 
 
 def main(config_path):
