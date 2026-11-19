@@ -19,21 +19,23 @@ def main(config_path):
     set_seed(cfg["common"]["seed"])
 
     dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
-    base = os.path.join(cfg["paths"]["checkpoint"],
+    base = os.path.join(cfg["paths"]["checkpoints"],
                         cfg["xai"]["experiment_name"])
 
     evaluate_folds(
         dados, rotulos,
         build_model=lambda: TwoStreamVGG19(num_classes=4),
+        streams = 2,
         checkpoint_pattern=os.path.join(base, "vgg19", "vgg19_fold_{fold}.pth"),
         cfg=tc,
     )
-    evaluate_folds(
-        dados, rotulos,
-        build_model=lambda: ThreeStreamResNet50(num_classes=4),
-        checkpoint_pattern=os.path.join(base, "resnet50", "resnet50_fold_{fold}.pth"),
-        cfg=tc,
-    )
+    # evaluate_folds(
+    #     dados, rotulos,
+    #     build_model=lambda: ThreeStreamResNet50(num_classes=4),
+    #     streams = 3,
+    #     checkpoint_pattern=os.path.join(base, "resnet50", "resnet50_fold_{fold}.pth"),
+    #     cfg=tc,
+    # )
 
 
 if __name__ == "__main__":

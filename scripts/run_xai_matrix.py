@@ -8,7 +8,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from common.config import TrainConfig
 from common.seed import set_seed
-from common.data import PairedDataset, create_paths
+from common.data import create_paths
+from xai.data import PairedDataset
 from xai.io_utils import load_checkpoint
 from xai.models import ThreeStreamResNet50, TwoStreamVGG19
 from xai.transforms import val_transform
@@ -26,7 +27,7 @@ def main(config_path):
     set_seed(cfg["common"]["seed"])
 
     dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
-    dataset = PairedDataset(dados, rotulos, val_transform)
+    dataset = PairedDataset(dados, rotulos, val_transform, streams=2)
 
     # --- VGG19 (2 streams) ---
     vgg = TwoStreamVGG19(num_classes=4).to(tc.device)
@@ -36,7 +37,7 @@ def main(config_path):
                           stream="rgb", grad=True, stream_keys=STREAM_KEYS_2)
     plotar_matriz_gradcam(vgg, dataset, exemplos, tc,
                           stream="rx", grad=True, stream_keys=STREAM_KEYS_2)
-
+    dataset = PairedDataset(dados, rotulos, val_transform)
     # --- ResNet50 (3 streams) ---
     resnet = ThreeStreamResNet50(num_classes=4).to(tc.device)
     resnet.load_state_dict(

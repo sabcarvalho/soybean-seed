@@ -20,7 +20,7 @@ def plot_confusion_matrix(targets, preds, labels=None):
     plt.show()
 
 
-def evaluate_folds(dados, rotulos, build_model, checkpoint_pattern, cfg):
+def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg):
     import torch
 
     kfold = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,
@@ -38,7 +38,7 @@ def evaluate_folds(dados, rotulos, build_model, checkpoint_pattern, cfg):
 
         val_loader = DataLoader(
             PairedDataset([dados[i] for i in va_idx], rotulos[va_idx],
-                          val_transform),
+                          val_transform, streams=streams),
             batch_size=cfg.batch_size, shuffle=False,
         )
         loss, acc, tgt, prd = validate(net, val_loader, criterion, cfg.device)
