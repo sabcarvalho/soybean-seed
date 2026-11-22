@@ -1,6 +1,6 @@
 """Entry point — reads a config JSON and runs the pipeline."""
 import argparse
-import json, sys
+import json, sys, os
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -40,9 +40,10 @@ def main(config_path: str):
             pipe = SegmentationPipeline(data, cfg)
             pipe.run()
             if is_labeled: 
-                dir = output_dir + "\\labeled"
+                dir = cfg_json["paths"]["cropped_labeled"]
             else:
-                dir = output_dir + "\\unlabeled"
+                dir = cfg_json["paths"]["cropped_unlabeled"]
+            os.makedirs(dir, exist_ok=True)
             pipe.save_cropped_seeds(dir, f"bandeja_{image_id}")
         except Exception as e:
             print(f"[ERRO] {image_id}: {e}")

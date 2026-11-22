@@ -20,21 +20,10 @@ class SegmentationPipeline:
         self.cfg = cfg
         self.SIZEX, self.SIZEY = cfg.crop_size
 
-    def run(self):
-        points = anote_points(self.json) if self.json is not None else None
-        cols = self.cfg.columns_per_row
-
-        contours, rgb_mask = segmentation_rgb(
-            self.rgb_img, self.cfg, self.cfg.roi, return_mask=True
-        )
-        centroids = calculate_centroids(contours)
-        ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
-
-        expected = self.cfg.expected_seeds
+    def _test_tray(self,contours, centroids, rgb_mask, cols, expected):
         diag = diagnose_tray(self.rgb_img, contours, centroids, rgb_mask,
-                            expected=expected, n_cols=cols, verbose=False)
-
-        # --- resolução do problema ---
+                                    expected=expected, n_cols=cols, verbose=False)
+        
         if diag["status"] in ("merged", "mixed") and diag["merges"]:
             new_contours = []
             for i, c in enumerate(contours):
@@ -63,17 +52,29 @@ class SegmentationPipeline:
                     new_contours.append(c)
             contours = tuple(new_contours)
             centroids = calculate_centroids(contours)
-
-        # --- diagnóstico final (para o log de QC) ---
         diag_final = diagnose_tray(self.rgb_img, contours, centroids, rgb_mask,
                                     expected=expected, n_cols=cols, verbose=False)
         self.diag = diag_final
-        if diag_final["status"] != "ok":
-            raise ValueError(
-                    f"Houve divergencia na qtde de sementes encontradas em relacao as esperadas: {len(contours)}/{expected}. Abortando..."
-                )
+        return contours, centroids
 
-        # --- reordenação com o conjunto final ---
+    def run(self):
+        points = anote_points(self.json) if self.json is not None else None
+        cols = self.cfg.columns_per_row
+
+        contours, rgb_mask = segmentation_rgb(
+            self.rgb_img, self.cfg, return_mask=True
+        )
+        centroids = calculate_centroids(contours)
+        ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
+
+        expected = self.cfg.expected_seeds
+        contours, centroids = self._test_tray(contours, centroids, rgb_mask, cols, expected)
+        
+        if self.diag["status"] != "ok":
+            raise ValueError(
+                f"Houve divergencia na qtde de sementes encontradas em relacao as esperadas: {len(contours)}/{expected}. Abortando..."
+            )
+
         ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)
 
         contours_rx = segmentation_rx(
@@ -89,7 +90,8 @@ class SegmentationPipeline:
         new_cen_rx = calculate_centroids(new_cnt_rx)
         ocen, _ = ordenate_points(new_cen_rx, new_cnt_rx, cols)
         self.cropped_rgb, self.cropped_rx, self.cropped_hiper = crop_seeds(self.rgb_img, ord_cen_rgb, 
-                                                                      new_rx, ocen, self.hiper_imgs, points, self.SIZEX, self.SIZEY)
+                                                                      new_rx, ocen, self.hiper_imgs, points, 
+                                                                      self.SIZEX, self.SIZEY, self.cfg.disk_open, self.cfg.disk_close)
 
     def save_cropped_seeds(self, output_dir, image_id):
         rgb_dir = os.path.join(output_dir, "RGB")

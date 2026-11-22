@@ -3,7 +3,8 @@ from dataclasses import dataclass, field
 
 @dataclass
 class PipelineConfig:
-    roi: tuple = (30, 600, 200, 650)      # y0, y1, x0, x1
+    roi_rgb: tuple = (30, 600, 200, 650)      # y0, y1, x0, x1
+    roi_rx: tuple = (109, 2331, 0, 2368)      # y0, y1, x0, x1
     crop_size: tuple = (64, 45)           # (SIZEX, SIZEY)
     columns_per_row: int = 5
     n_hyperspectral_bands: int = 150

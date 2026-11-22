@@ -101,8 +101,8 @@ def calculate_morphology(erosion_radius, dilation_radius, img, normalization = 2
     return converted
 
 
-def segmentation_rgb(img, cfg, roi=None, return_mask=False):
-    roi = roi or cfg.roi
+def segmentation_rgb(img, cfg, return_mask=False):
+    roi = cfg.roi_rgb
     crop = prepare_img(img, roi)
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
     saturation = hsv[:, :, 1]
@@ -128,7 +128,9 @@ def segmentation_rgb(img, cfg, roi=None, return_mask=False):
 
 
 def segmentation_rx(img, cfg, rotate=True, return_mask=False):
-    copy = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE) if rotate else img.copy()
+    roi = cfg.roi_rx
+    crop = prepare_img(img, roi)
+    copy = cv2.rotate(crop, cv2.ROTATE_90_CLOCKWISE) if rotate else img.copy()
     gray = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)
     result = calculate_morphology(cfg.rx_erosion, cfg.rx_dilation, gray)
     contours, _ = cv2.findContours(result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)

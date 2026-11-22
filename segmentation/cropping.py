@@ -124,32 +124,14 @@ def crop_seeds_centered(img, centroids, points, size_x, size_y, hiper=None,
         return cropped_img, cropped_hiper, cropped_masks
     return cropped_img, cropped_hiper
 
-def crop_seeds(img_rgb, centroids_rgb,
-               img_rx, centroids_rx,
-               hiper, points, size_x, size_y,):
-  cropped_rgb,cropped_rx, cropped_hiper  = [], [], []
-  half_x, half_y = size_x // 2, size_y // 2
+def _create_mask(img, disk_open = 2, disk_close = 1):
+    _, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-  img_rx = cv2.cvtColor(img_rx, cv2.COLOR_BGR2GRAY)
+    disk = morphology.disk(disk_open)
+    open = morphology.opening(thresh, disk)
 
-  if points is not None:
-    points_ordered = ordenate_points(points)
-
-  for i, cent in enumerate(centroids_rgb):
-    x0, x1 = int(cent[0] - half_x), int(cent[0] + half_x)
-    y0, y1 = int(cent[1] - half_y), int(cent[1] + half_y)
-
-    seed_rgb = img_rgb[y0:y1, x0:x1]
-    hp = hiper[:, y0:y1, x0:x1]
-
-    x0, x1 = int(centroids_rx[i][0] - half_x), int(centroids_rx[i][0] + half_x)
-    y0, y1 = int(centroids_rx[i][1] - half_y), int(centroids_rx[i][1] + half_y)
-
-    seed_rx = img_rx[y0:y1, x0:x1]
-    _, thresh = cv2.threshold(seed_rx, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    disk = morphology.disk(4)
-    closed = morphology.closing(thresh, disk)
+    disk = morphology.disk(disk_close)
+    closed = morphology.closing(open, disk)
 
     converted = np.array(closed, dtype=int)
     mask = cv2.normalize(converted, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
@@ -173,18 +155,53 @@ def crop_seeds(img_rgb, centroids_rgb,
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask = cv2.dilate(mask, kernel, iterations=1)
 
-    seed_rx = seed_rx * mask
-    hp = hp * mask
+    return mask
 
-    mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-    seed_rgb = seed_rgb * mask
+def crop_seeds(img_rgb, centroids_rgb,
+               img_rx, centroids_rx,
+               hiper, points, size_x, size_y, disk_open = 2, disk_close = 1):
+    cropped_rgb,cropped_rx, cropped_hiper  = [], [], []
+    half_x, half_y = size_x // 2, size_y // 2
 
-    label = points_ordered[i][1] if points is not None else ""
+    img_rx = cv2.cvtColor(img_rx, cv2.COLOR_BGR2GRAY)
+    n_rx, n_rgb = len(centroids_rx), len(centroids_rgb)
+    
+    if n_rx != n_rgb:
+            raise ValueError(
+                f"Crop: contagens diferentes — "
+                f"RGB={n_rgb}, RX={n_rx}. "
+                f"Verifique segmentacao das duas modalidades nesta bandeja."
+            )
 
-    seed_rgb = [seed_rgb, label]
-    seed_rx = [seed_rx, label]
-      
-    cropped_rgb.append(seed_rgb)
-    cropped_rx.append(seed_rx)
-    cropped_hiper.append(hp)
-  return cropped_rgb, cropped_rx, cropped_hiper
+    if points is not None:
+        points_ordered = ordenate_points(points)
+
+    for i, cent in enumerate(centroids_rgb):
+        x0, x1 = int(cent[0] - half_x), int(cent[0] + half_x)
+        y0, y1 = int(cent[1] - half_y), int(cent[1] + half_y)
+
+        seed_rgb = img_rgb[y0:y1, x0:x1]
+        hp = hiper[:, y0:y1, x0:x1]
+
+        x0, x1 = int(centroids_rx[i][0] - half_x), int(centroids_rx[i][0] + half_x)
+        y0, y1 = int(centroids_rx[i][1] - half_y), int(centroids_rx[i][1] + half_y)
+
+        seed_rx = img_rx[y0:y1, x0:x1]
+        
+        mask = _create_mask(seed_rx, disk_open = 2, disk_close = 1)
+
+        seed_rx = seed_rx * mask
+        hp = hp * mask
+
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        seed_rgb = seed_rgb * mask
+
+        label = points_ordered[i][1] if points is not None else ""
+
+        seed_rgb = [seed_rgb, label]
+        seed_rx = [seed_rx, label]
+        
+        cropped_rgb.append(seed_rgb)
+        cropped_rx.append(seed_rx)
+        cropped_hiper.append(hp)
+    return cropped_rgb, cropped_rx, cropped_hiper
