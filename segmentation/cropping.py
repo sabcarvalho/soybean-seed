@@ -1,9 +1,10 @@
 import cv2
 import numpy as np
 from .geometry import ordenate_points
-from .segmentation import calculate_morphology
 from skimage.feature import peak_local_max
 from skimage.segmentation import watershed
+from .segmentation import calculate_morphology
+from skimage import morphology
 
 def seed_mask_in_crop(crop, center_local, max_radius=None, mode="auto", median_area=None):
     if crop is None or crop.size == 0:
@@ -81,7 +82,7 @@ def seed_mask_in_crop(crop, center_local, max_radius=None, mode="auto", median_a
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     return mask
 
-
+# 32: crop = [45, 600, 243, 650],
 
 def crop_seeds_centered(img, centroids, points, size_x, size_y, hiper=None,
                         columns_per_row=5, max_radius=None,
@@ -145,7 +146,32 @@ def crop_seeds(img_rgb, centroids_rgb,
     y0, y1 = int(centroids_rx[i][1] - half_y), int(centroids_rx[i][1] + half_y)
 
     seed_rx = img_rx[y0:y1, x0:x1]
-    mask = calculate_morphology(1,5,seed_rx, 1)
+    _, thresh = cv2.threshold(seed_rx, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    disk = morphology.disk(4)
+    closed = morphology.closing(thresh, disk)
+
+    converted = np.array(closed, dtype=int)
+    mask = cv2.normalize(converted, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnt = contours[0]
+    if len(contours) > 1:
+        biggest = [0,0]
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > biggest[0]:
+                biggest = [area, cnt]
+
+        cnt = biggest[1]
+
+    mask = np.zeros_like(mask)
+    cv2.drawContours(mask, cnt, -1, color=1, thickness=cv2.FILLED )
+    mask_bool = mask.astype(bool)
+    hull = morphology.convex_hull_image(mask_bool)
+    mask = (hull).astype(np.uint8)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.dilate(mask, kernel, iterations=1)
 
     seed_rx = seed_rx * mask
     hp = hp * mask

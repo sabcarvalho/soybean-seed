@@ -69,8 +69,9 @@ class SegmentationPipeline:
                                     expected=expected, n_cols=cols, verbose=False)
         self.diag = diag_final
         if diag_final["status"] != "ok":
-            print(f"[AVISO] houve divergencia na qtde de sementes encontradas em relacao as esperadas: {len(contours)}/{expected}. Abortando...")
-            return
+            raise ValueError(
+                    f"Houve divergencia na qtde de sementes encontradas em relacao as esperadas: {len(contours)}/{expected}. Abortando..."
+                )
 
         # --- reordenação com o conjunto final ---
         ord_cen_rgb, _ = ordenate_points(centroids, contours, cols)

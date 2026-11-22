@@ -38,7 +38,19 @@ def ordenate_points(points, contours=None, columns_per_row=5):
 
 
 def homography(img_rx, centroids_rx, img_rgb, centroids_rgb,
-               ransac_threshold=1.0):
+               ransac_threshold=1.0, min_points = 4):
+    n_rx, n_rgb = len(centroids_rx), len(centroids_rgb)
+
+    if n_rx != n_rgb:
+        raise ValueError(
+            f"Homografia: contagens diferentes — "
+            f"RGB={n_rgb}, RX={n_rx}. "
+            f"Verifique segmentacao das duas modalidades nesta bandeja."
+        )
+    if n_rx < min_points or n_rgb <min_points:
+        raise ValueError(
+            f"Homografia: precisa de ≥{min_points} pontos, veio {n_rx}."
+        )
     c_rgb = np.array(centroids_rgb)
     c_rx = np.array(centroids_rx)
     M, _ = cv2.findHomography(c_rx, c_rgb, cv2.RANSAC, ransac_threshold)
