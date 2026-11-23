@@ -21,7 +21,7 @@ class PairedDataset(Dataset):
 
     def _load_hiper(self, path):
         cube = np.load(path)                     # (bands, h, w)
-        return torch.tensor(cube, dtype=torch.float32)
+        return torch.tensor(np.mean(cube, axis=(1, 2)), dtype=torch.float32)
 
     def __getitem__(self, idx):
         caminhos = self.dados[idx]

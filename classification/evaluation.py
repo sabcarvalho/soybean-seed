@@ -1,11 +1,27 @@
 """High-level experiment drivers."""
 import copy
-
+from sklearn.calibration import CalibratedClassifierCV
 import numpy as np
 import torch, os
+from sklearn.metrics import (
+    ConfusionMatrixDisplay, confusion_matrix,
+)
+import matplotlib.pyplot as plt
 
 from .classifiers import RandomForest, SupportVectorMachine, XGBoost
 from .torch_training import do_cross_val_torch, reset_weights
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from common.classes import DISPLAY_LABELS_EN
+
+def plot_confusion_matrix(targets, preds, labels=None, file_name = None, format ="pdf"):
+    file_name = file_name + "."+ format
+    labels = labels or DISPLAY_LABELS_EN
+    cm = confusion_matrix(targets, preds)
+    ConfusionMatrixDisplay(cm, display_labels=labels).plot(cmap=plt.cm.Blues)
+    plt.savefig(file_name, format=format, bbox_inches="tight")
 
 def _run_and_log(classifiers, data, labels, feature_name, model_name,
                  cfg, logger):
@@ -18,7 +34,7 @@ def _run_and_log(classifiers, data, labels, feature_name, model_name,
         print(name)
         scores, pred = clf.cross_val(data, labels, cv_folds=cfg.cv_folds,
                                random_state=cfg.random_state)
-        clf.plot_confusion_matrix(labels, pred, file_name = os.path.join(output_matrix, f"{model_name}-{name}-{feature_name}"))
+        plot_confusion_matrix(labels, pred, file_name = os.path.join(output_matrix_sklearn, f"{model_name}-{name}-{feature_name}"))
         if logger is not None:
             row = {
                 "model": model_name,
@@ -32,10 +48,12 @@ def _run_and_log(classifiers, data, labels, feature_name, model_name,
                 row[f"fold_{i + 1}_acc"] = float(s)
             logger.add(**row)
 
-def evaluate_sklearn_models(data_extracted, labels, cfg,
+def evaluate_sklearn_models(data_extracted, labels, cfg, output_path=None,
                              model_name="unknown", logger=None):
-    global output_matrix 
-    output_matrix = os.path.join(cfg["paths"]["output"], "conf_matrix_eval")
+    global output_matrix_sklearn 
+    output_matrix_sklearn = os.path.join(output_path, "conf_matrix_sklearn")
+    os.makedirs(output_matrix_sklearn, exist_ok=True)
+    
     classifiers = [
         ("SVM", SupportVectorMachine()),
         ("RandomForest", RandomForest(random_state=cfg.random_state)),
@@ -60,7 +78,8 @@ def _run_torch_and_log(classifier, data, labels, feature_name,
     print(title)
     print("="*len(title))
     classifier.apply(reset_weights)
-    accs, losses = do_cross_val_torch(data, labels, classifier, cfg)
+    accs, losses, pred, label = do_cross_val_torch(data, labels, classifier, cfg)
+    plot_confusion_matrix(labels, pred, file_name = os.path.join(output_matrix_sklearn, f"{model_name}-{feature_name}"))
     if logger is not None:
         row = {
             "model": model_name,
@@ -75,10 +94,14 @@ def _run_torch_and_log(classifier, data, labels, feature_name,
         logger.add(**row)
 
 def evaluate_torch_models(data_extracted, labels, head, classifier_index, cfg,
-                          model_name, logger):
+                          model_name, logger, output_path=None):
+    global output_matrix_torch 
+    output_matrix_torch = os.path.join(output_path, "conf_matrix_torch")
+    os.makedirs(output_matrix_torch, exist_ok=True)
+
     head = copy.deepcopy(head)
     out_feat = head[classifier_index].out_features
-
+    
     def _set_in_features(n):
         head[classifier_index] = torch.nn.Linear(
             in_features=n, out_features=out_feat, bias=True

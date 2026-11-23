@@ -49,7 +49,7 @@ def _epoch_loop(loader, net, criterion, optimizer, device, training):
 
     pred = np.concatenate(pred_list)
     label = np.concatenate(label_list)
-    return accuracy_score(pred, label), float(np.asarray(epoch_loss).mean())
+    return accuracy_score(pred, label), float(np.asarray(epoch_loss).mean()), pred, label
 
 
 def do_cross_val_torch(data, labels, net, cfg):
@@ -61,7 +61,7 @@ def do_cross_val_torch(data, labels, net, cfg):
         n_splits=cfg.cv_folds, shuffle=True, random_state=cfg.random_state
     )
 
-    score_acc, score_loss = [], []
+    score_acc, score_loss, preds, labs = [], [], [], []
     for fold, (tr, va) in enumerate(
         kfold.split(np.arange(len(dataset)), labels)
     ):
@@ -77,11 +77,13 @@ def do_cross_val_torch(data, labels, net, cfg):
         for _ in range(cfg.epochs):
             _epoch_loop(train_loader, net, criterion, optimizer, device, True)
 
-        acc, loss = _epoch_loop(val_loader, net, criterion, None, device, False)
+        acc, loss, pred, label = _epoch_loop(val_loader, net, criterion, None, device, False)
         score_acc.append(acc)
         score_loss.append(loss)
+        preds.append(pred)
+        labs.append(label)
         print(f"\r",end="\r", flush=True)
 
     print(f"\nAvg accuracy: {np.mean(score_acc)}")
     print(f"Avg loss std: {np.std(score_loss)}")
-    return np.array(score_acc), np.array(score_loss)
+    return np.array(score_acc), np.array(score_loss), np.array(preds), np.array(labs)
