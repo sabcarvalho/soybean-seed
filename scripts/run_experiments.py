@@ -61,10 +61,10 @@ def main(config_path):
         )
         extractor.run(path_data, file_name="labeled")
 
-        evaluate_sklearn_models(extractor, labels, train_cfg, output_path= cfg_json["paths"]["output"],
+        evaluate_sklearn_models(extractor, labels, train_cfg, output_path= logger.output_dir,
                                  model_name=bundle.name, logger=logger)
         evaluate_torch_models(extractor, labels, bundle.classifier_head,
-                              bundle.classifier_index, train_cfg, output_path= cfg_json["paths"]["output"],
+                              bundle.classifier_index, train_cfg, output_path= logger.output_dir,
                               model_name=bundle.name, logger=logger)
 
      # Tabela cruzada (modelo x features) pronta pro artigo

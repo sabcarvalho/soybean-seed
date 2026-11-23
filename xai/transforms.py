@@ -24,3 +24,20 @@ val_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
 ])
+
+train_transform_inception = transforms.Compose([
+    PadToSquare(fill=0),
+    transforms.Resize((299, 299)),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomVerticalFlip(p=0.5),
+    transforms.RandomRotation(degrees=30),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
+])
+
+val_transform_inception = transforms.Compose([
+    PadToSquare(fill=0),
+    transforms.Resize((299, 299)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
+])

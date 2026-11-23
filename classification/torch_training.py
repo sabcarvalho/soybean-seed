@@ -80,8 +80,8 @@ def do_cross_val_torch(data, labels, net, cfg):
         acc, loss, pred, label = _epoch_loop(val_loader, net, criterion, None, device, False)
         score_acc.append(acc)
         score_loss.append(loss)
-        preds.append(pred)
-        labs.append(label)
+        preds.extend(pred)
+        labs.extend(label)
         print(f"\r",end="\r", flush=True)
 
     print(f"\nAvg accuracy: {np.mean(score_acc)}")

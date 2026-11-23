@@ -9,13 +9,20 @@ from common.config import TrainConfig
 from common.seed import set_seed
 from common.logger import ResultsLogger
 from common.data import create_paths
-from xai.models import ThreeStreamResNet50, TwoStreamVGG19
+from xai.models import ThreeStreamResNet50, TwoStreamVGG19, ThreeStreamInceptionV3
 from xai.training import cross_validate_finetune
-
+from xai.transforms import (
+    train_transform, val_transform,
+    train_transform_inception, val_transform_inception,
+)
 
 MODEL_BUILDERS = {
-    "vgg19": (lambda: TwoStreamVGG19(num_classes=4), 2),
-    "resnet50": (lambda: ThreeStreamResNet50(num_classes=4), 3),
+    "vgg19": (lambda: TwoStreamVGG19(num_classes=4),
+              train_transform, val_transform, 2),
+    "resnet50": (lambda: ThreeStreamResNet50(num_classes=4),
+                 train_transform, val_transform, 3),
+    "inception": (lambda: ThreeStreamInceptionV3(num_classes=4),
+                train_transform_inception, val_transform_inception),
 }
 
 
@@ -34,7 +41,7 @@ def main(config_path):
     dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
     print(f"Total de sementes: {len(dados)}")
 
-    for model_name, (build, streams) in MODEL_BUILDERS.items():
+    for model_name, (build, train_tf, val_tf, streams) in MODEL_BUILDERS.items():
         out_dir = os.path.join(
             cfg["paths"]["checkpoints"],
             cfg["xai"]["experiment_name"],
@@ -44,6 +51,8 @@ def main(config_path):
         cross_validate_finetune(dados, rotulos, build, streams, tc,
                                  checkpoint_dir=out_dir,
                                  model_tag=model_name,
+                                 train_tf=train_tf,
+                                 val_tf=val_tf,
                                  logger=logger)
     logger.finalize(
         also_latex=True,

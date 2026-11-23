@@ -1,5 +1,5 @@
 """Fine-tuning e validação."""
-import copy, time
+import copy, time, os
 
 import numpy as np
 import torch
@@ -74,9 +74,11 @@ def _unfreeze_and_reoptimize(model, cfg):
 
 
 def cross_validate_finetune(dados, rotulos, build_model, streams, cfg,
-                            checkpoint_dir, model_tag="model", logger = None):
-    """5-fold fine-tuning. Salva melhor checkpoint por fold."""
-    import os
+                             checkpoint_dir, model_tag,
+                             train_tf=None, val_tf=None, logger=None):
+    
+    train_tf = train_tf or train_transform
+    val_tf = val_tf or val_transform
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     kfold = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,

@@ -54,3 +54,42 @@ class ThreeStreamResNet50(nn.Module):
         feat_rx = torch.flatten(self.pool(self.encoder_rx(x_rx)), 1)
         feat_hiper = self.encoder_hiper(x_hiper)
         return self.classifier(torch.cat((feat_rgb, feat_rx, feat_hiper), dim=1))
+
+def _inception_encoder():
+    model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT)
+    model.aux_logits = False
+    model.AuxLogits = None
+    # Seleciona por nome — robusto entre versões do torchvision
+    layers = [m for name, m in model.named_children()
+              if name not in ("avgpool", "dropout", "fc")]
+    return nn.Sequential(*layers)
+
+
+class ThreeStreamInceptionV3(nn.Module):
+    def __init__(self, num_classes=4, num_hiper_bands=150):
+        super().__init__()
+
+        self.encoder_rgb = _inception_encoder()
+        self.encoder_rx = _inception_encoder()
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Encoder espectral — idêntico ao ResNet50
+        self.encoder_hiper = nn.Sequential(
+            nn.Linear(num_hiper_bands, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+        )
+
+        # 2048 (RGB) + 2048 (RX) + 512 (Hiper) = 4608
+        self.classifier = nn.Linear(in_features=2048 + 2048 + 512,
+                                    out_features=num_classes)
+
+    def forward(self, x_rgb, x_rx, x_hiper):
+        feat_rgb = torch.flatten(self.pool(self.encoder_rgb(x_rgb)), 1)
+        feat_rx = torch.flatten(self.pool(self.encoder_rx(x_rx)), 1)
+        feat_hiper = self.encoder_hiper(x_hiper)
+        return self.classifier(
+            torch.cat((feat_rgb, feat_rx, feat_hiper), dim=1)
+        )

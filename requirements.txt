@@ -9,3 +9,4 @@ xgboost>=2.0
 torch>=2.0
 torchvision>=0.15
 grad-cam>=1.4.8
+pandas

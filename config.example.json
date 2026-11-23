@@ -44,6 +44,16 @@
     },
     "cv_folds": 5
   },
+  "semi_supervised": {
+    "enabled": true,
+    "unlabeled_crops": "data/sementes_recortadas",
+    "rounds": 3,
+    "threshold": 0.9,
+    "lambda_u": 1.0,
+    "start_epoch": 3,
+    "strong_aug": true,
+    "balance_pseudo": true
+  },
 
   "xai": {
     "experiment_name": "exp1",

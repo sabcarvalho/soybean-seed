@@ -67,7 +67,8 @@ def _overlay_gradcam(wrapper, target_layer, input_tensor, img_float):
 
 def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
                           stream="rgb", grad=True,
-                          stream_keys=("rgb", "rx")):
+                          stream_keys=("rgb", "rx"),
+                          img_size: int = 224):
     """Matriz NxN de exemplos com Grad-CAM sobreposto.
 
     `stream`       : "rgb" ou "rx" — qual via mostrar.
@@ -121,7 +122,7 @@ def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
                 img_raw = cv2.imread(caminhos["rx"], cv2.IMREAD_GRAYSCALE)
                 img = cv2.cvtColor(img_raw, cv2.COLOR_GRAY2RGB)
 
-            img_float = np.float32(cv2.resize(img, (224, 224))) / 255
+            img_float = np.float32(cv2.resize(img, (img_size, img_size))) / 255
 
             if grad:
                 vis = _overlay_gradcam(wrapper, target_layer, input_tensor, img_float)
@@ -130,7 +131,7 @@ def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
 
             ax.imshow(vis)
             ax.add_patch(patches.Rectangle(
-                (0, 0), 223, 223, linewidth=8,
+                (0, 0), img_size-1, img_size-1, linewidth=8,
                 edgecolor=cor, facecolor="none",
             ))
 

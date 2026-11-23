@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_val_predict
 from sklearn.svm import SVC
+from sklearn.calibration import CalibratedClassifierCV
 
 class Classifier:
     def __init__(self):
@@ -32,7 +33,8 @@ class Classifier:
 
 class SupportVectorMachine(Classifier):
     def __init__(self, random_state=42):
-        self.model = SVC(kernel="linear", random_state=random_state)
+        svc = SVC(kernel="linear", random_state=random_state)
+        self.model = CalibratedClassifierCV(svc, ensemble=False)
 
 
 class RandomForest(Classifier):

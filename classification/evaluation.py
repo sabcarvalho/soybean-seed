@@ -22,6 +22,7 @@ def plot_confusion_matrix(targets, preds, labels=None, file_name = None, format 
     cm = confusion_matrix(targets, preds)
     ConfusionMatrixDisplay(cm, display_labels=labels).plot(cmap=plt.cm.Blues)
     plt.savefig(file_name, format=format, bbox_inches="tight")
+    plt.close()
 
 def _run_and_log(classifiers, data, labels, feature_name, model_name,
                  cfg, logger):
@@ -79,7 +80,7 @@ def _run_torch_and_log(classifier, data, labels, feature_name,
     print("="*len(title))
     classifier.apply(reset_weights)
     accs, losses, pred, label = do_cross_val_torch(data, labels, classifier, cfg)
-    plot_confusion_matrix(labels, pred, file_name = os.path.join(output_matrix_sklearn, f"{model_name}-{feature_name}"))
+    plot_confusion_matrix(label, pred, file_name = os.path.join(output_matrix_torch, f"{model_name}-{feature_name}"))
     if logger is not None:
         row = {
             "model": model_name,

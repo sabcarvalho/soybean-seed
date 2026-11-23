@@ -25,10 +25,11 @@ class TrainConfig:
 @dataclass
 class SSLConfig:
     enabled: bool = False
-    unlabeled_crops: str = ""
     rounds: int = 3
     threshold: float = 0.9
     lambda_u: float = 1.0
     start_epoch: int = 3
     strong_aug: bool = True
     balance_pseudo: bool = True
+    cv_folds: int = 5
+    random_state: int = 42

@@ -5,6 +5,9 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.semi_supervised import LabelSpreading, LabelPropagation
 
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import accuracy_score
+
 
 class GraphSSL:
     """Wrapper de LabelSpreading com pré-processamento padrão.
@@ -57,6 +60,7 @@ class GraphSSL:
             kernel=self.kernel,
             n_neighbors=self.n_neighbors,
             max_iter=self.max_iter,
+            n_jobs=1
         ).fit(X, y)
         return self
 
@@ -78,9 +82,6 @@ class GraphSSL:
 # --------------------------------------------------------------------- #
 def cv_graph_ssl(model_factory, X_labeled, y_labeled, X_unlabeled,
                  cv_folds=5, random_state=42, verbose=True):
-    from sklearn.model_selection import StratifiedKFold
-    from sklearn.metrics import accuracy_score
-
     X_all = np.concatenate([X_labeled, X_unlabeled], axis=0) \
         if X_unlabeled is not None and len(X_unlabeled) > 0 else X_labeled
     n_lab = len(X_labeled)
