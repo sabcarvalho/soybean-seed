@@ -2,6 +2,24 @@ import glob
 import os
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
+import torchvision.transforms.functional as F
+
+class PadToSquare:
+    def __init__(self, fill=0):
+        self.fill = fill
+
+    def __call__(self, img):
+        w, h = img.size
+        if w == h:
+            return img
+        side = max(w, h)
+        pad_left   = (side - w) // 2
+        pad_right  = side - w - pad_left
+        pad_top    = (side - h) // 2
+        pad_bottom = side - h - pad_top
+        return F.pad(img, (pad_left, pad_top, pad_right, pad_bottom),
+                     fill=self.fill)
+
 
 def create_paths(root, is_labeled=True):
     """Scan root/{RGB,RX,HIPER} and return (list of dicts, labels)."""

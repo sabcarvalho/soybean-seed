@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     ConfusionMatrixDisplay, classification_report, confusion_matrix,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_val_predict
 from sklearn.svm import SVC
 import sys
 from pathlib import Path
@@ -36,13 +36,14 @@ class Classifier:
         )
         print(f"Scores per fold: {scores}")
         print(f"Mean Accuracy: {scores.mean():.3f} (+/- {scores.std() * 2:.3f})")
-        return scores
+        y_pred = cross_val_predict(self.model, dataset, label, cv=cv,)
+        return scores, y_pred
 
-    def plot_confusion_matrix(self, y_true, y_pred):
+    def plot_confusion_matrix(self, y_true, y_pred, file_name=None, format="pdf"):
+        file_name = file_name + "."+ format
         cm = confusion_matrix(y_true, y_pred)
-        disp = ConfusionMatrixDisplay(cm, display_labels=DISPLAY_LABELS_EN)
-        disp.plot(cmap=plt.cm.Blues)
-        plt.show()
+        ConfusionMatrixDisplay(cm, display_labels=DISPLAY_LABELS_EN).plot(cmap=plt.cm.Blues)
+        plt.savefig(file_name, format=format, bbox_inches="tight")
 
 
 class SupportVectorMachine(Classifier):

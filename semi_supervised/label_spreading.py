@@ -56,7 +56,6 @@ class GraphSSL:
         self._model = self._model_cls(
             kernel=self.kernel,
             n_neighbors=self.n_neighbors,
-            alpha=self.alpha,
             max_iter=self.max_iter,
         ).fit(X, y)
         return self
@@ -138,7 +137,7 @@ def evaluate_graph_ssl(data_labeled, y_labeled, data_unlabeled, cfg,
                 model_factory=lambda kw=kw: GraphSSL(**kw),
                 X_labeled=X_l, y_labeled=y_labeled,
                 X_unlabeled=X_unl,
-                cv_folds=cfg.cv_folds, random_state=cfg.random_state,
+                cv_folds=cfg["classification"]["cv_folds"], random_state=cfg["common"]["seed"],
                 verbose=False,
             )
             print(f"  {feature_name:15s} | {ssl_name:25s} | "

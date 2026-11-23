@@ -21,6 +21,7 @@ def main(config_path):
     dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
     base = os.path.join(cfg["paths"]["checkpoints"],
                         cfg["xai"]["experiment_name"])
+    output_matrix = os.path.join(cfg["paths"]["output"], "conf_matrix_fine_tune")
 
     evaluate_folds(
         dados, rotulos,
@@ -28,14 +29,16 @@ def main(config_path):
         streams = 2,
         checkpoint_pattern=os.path.join(base, "vgg19", "vgg19_fold_{fold}.pth"),
         cfg=tc,
+        file_name= os.path.join(output_matrix, "matrix_vgg19")
     )
-    # evaluate_folds(
-    #     dados, rotulos,
-    #     build_model=lambda: ThreeStreamResNet50(num_classes=4),
-    #     streams = 3,
-    #     checkpoint_pattern=os.path.join(base, "resnet50", "resnet50_fold_{fold}.pth"),
-    #     cfg=tc,
-    # )
+    evaluate_folds(
+        dados, rotulos,
+        build_model=lambda: ThreeStreamResNet50(num_classes=4),
+        streams = 3,
+        checkpoint_pattern=os.path.join(base, "resnet50", "resnet50_fold_{fold}.pth"),
+        cfg=tc,
+        file_name= os.path.join(output_matrix, "matrix_resnet50")
+    )
 
 
 if __name__ == "__main__":

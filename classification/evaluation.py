@@ -2,7 +2,7 @@
 import copy
 
 import numpy as np
-import torch
+import torch, os
 
 from .classifiers import RandomForest, SupportVectorMachine, XGBoost
 from .torch_training import do_cross_val_torch, reset_weights
@@ -13,10 +13,12 @@ def _run_and_log(classifiers, data, labels, feature_name, model_name,
     print("\n" + "="*len(title))
     print(title)
     print("="*len(title))
+
     for name, clf in classifiers:
         print(name)
-        scores = clf.cross_val(data, labels, cv_folds=cfg.cv_folds,
+        scores, pred = clf.cross_val(data, labels, cv_folds=cfg.cv_folds,
                                random_state=cfg.random_state)
+        clf.plot_confusion_matrix(labels, pred, file_name = os.path.join(output_matrix, f"{model_name}-{name}-{feature_name}"))
         if logger is not None:
             row = {
                 "model": model_name,
@@ -32,6 +34,8 @@ def _run_and_log(classifiers, data, labels, feature_name, model_name,
 
 def evaluate_sklearn_models(data_extracted, labels, cfg,
                              model_name="unknown", logger=None):
+    global output_matrix 
+    output_matrix = os.path.join(cfg["paths"]["output"], "conf_matrix_eval")
     classifiers = [
         ("SVM", SupportVectorMachine()),
         ("RandomForest", RandomForest(random_state=cfg.random_state)),

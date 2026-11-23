@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
-import sys
+import sys,os
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from common.classes import DISPLAY_LABELS_EN
@@ -13,16 +14,15 @@ from .transforms import val_transform
 from .training import validate
 
 
-def plot_confusion_matrix(targets, preds, labels=None):
+def plot_confusion_matrix(targets, preds, labels=None, file_name = None, format ="pdf"):
+    file_name = file_name + "."+ format
     labels = labels or DISPLAY_LABELS_EN
     cm = confusion_matrix(targets, preds)
     ConfusionMatrixDisplay(cm, display_labels=labels).plot(cmap=plt.cm.Blues)
-    plt.show()
+    plt.savefig(file_name, format=format, bbox_inches="tight")
 
 
-def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg):
-    import torch
-
+def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg, file_name=None, format="pdf"):
     kfold = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,
                             random_state=42)
     score_acc, score_loss = [], []
@@ -58,5 +58,5 @@ def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg
 
     targets = np.concatenate(targets_all)
     preds = np.concatenate(preds_all)
-    plot_confusion_matrix(targets, preds)
+    plot_confusion_matrix(targets, preds, file_name, format)
     return targets, preds

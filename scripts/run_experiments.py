@@ -43,7 +43,6 @@ def main(config_path):
     )
 
     path_data, labels = create_paths(cfg_json["paths"]["cropped_labeled"], is_labeled=True)
-    print(labels)
 
     print(f"Total de sementes anotadas: {len(path_data)}")
     print(f"Distribuição de classes: {dict(zip(*__import__('numpy').unique(labels, return_counts=True)))}")

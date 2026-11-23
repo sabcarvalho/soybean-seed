@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from common.config import _IMAGENET_MEAN, _IMAGENET_STD
+from common.data import PadToSquare
 
 @dataclass
 class ModelBundle:
@@ -21,6 +22,7 @@ class ModelBundle:
 
 def _preprocess(size=224):
     return transforms.Compose([
+        PadToSquare(fill=0), 
         transforms.Resize((size, size)),
         transforms.ToTensor(),
         transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),

@@ -41,10 +41,10 @@ class Extractor:
             img_rx_3ch = img_rx
         feat_rx = self.extract_visual_features(img_rx_3ch)
 
-        feat_hiper = np.mean(cube_hiper, axis=(1, 2))
-        self.len_hiper = feat_hiper.shape[0]
+        #feat_hiper = np.mean(cube_hiper, axis=(1, 2))
+        self.len_hiper = cube_hiper.shape[0]
 
-        return np.concatenate((feat_rgb, feat_rx, feat_hiper))
+        return np.concatenate((feat_rgb, feat_rx, cube_hiper))
 
     def load_and_extract_matrix(self, path_list):
         X = []

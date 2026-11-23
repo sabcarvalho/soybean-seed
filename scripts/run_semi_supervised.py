@@ -67,7 +67,7 @@ def run_label_spreading(cfg):
                           preprocess=bundle.preprocess, device=device)
         ext_u.run(unlabeled, file_name="unlabeled")
 
-        evaluate_graph_ssl(ext_l, y, ext_u, cfg["classification"],
+        evaluate_graph_ssl(ext_l, y, ext_u, cfg,
                            model_name=bundle.name, logger=logger)
 
     logger.finalize()
