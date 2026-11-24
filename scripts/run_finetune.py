@@ -22,7 +22,7 @@ MODEL_BUILDERS = {
     "resnet50": (lambda: ThreeStreamResNet50(num_classes=4),
                  train_transform, val_transform, 3),
     "inception": (lambda: ThreeStreamInceptionV3(num_classes=4),
-                train_transform_inception, val_transform_inception),
+                train_transform_inception, val_transform_inception, 3),
 }
 
 

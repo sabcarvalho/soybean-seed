@@ -23,4 +23,5 @@ venv/
 *.egg-info/
 dist/
 build/
-.tex
+*.tex
+*.pth

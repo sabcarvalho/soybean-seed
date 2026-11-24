@@ -1,14 +1,16 @@
 import argparse
-import json
+import json, torch
 
-import torch, sys
+import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 from common.config import TrainConfig
 from common.seed import set_seed
 from common.data import create_paths
+from classification.models import build_inception_v3
+from classification.data import CustomDataset
+from classification.feature_extraction import Extractor
 from xai.data import PairedDataset
 from xai.io_utils import load_checkpoint
 from xai.models import ThreeStreamResNet50, TwoStreamVGG19, ThreeStreamInceptionV3
@@ -53,7 +55,7 @@ def main(config_path):
     tc = TrainConfig(**cfg.get("training", {}))
     set_seed(cfg.get("seed", 42))
 
-    dados, rotulos = create_paths(cfg["labeled_dir"], is_labeled=True)
+    dados, rotulos = create_paths(cfg["paths"]["cropped_labeled"], is_labeled=True)
 
     # ══════════════════════════════════════════════════════════════════
     # VGG19 — 2 streams, input 224
@@ -61,7 +63,7 @@ def main(config_path):
     ds_vgg = PairedDataset(dados, rotulos, val_transform)
     vgg = TwoStreamVGG19(num_classes=4).to(tc.device)
     vgg.load_state_dict(
-        load_checkpoint(cfg["xai"]["vgg_checkpoint"], tc.device)
+        load_checkpoint(cfg["xai"]["checkpoints"]["vgg19"], tc.device)
     )
     _run_matrices(vgg, ds_vgg,
                   stream_keys=STREAM_KEYS_2,
@@ -73,7 +75,7 @@ def main(config_path):
     ds_resnet = PairedDataset(dados, rotulos, val_transform)
     resnet = ThreeStreamResNet50(num_classes=4).to(tc.device)
     resnet.load_state_dict(
-        load_checkpoint(cfg["xai"]["resnet_checkpoint"], tc.device)
+        load_checkpoint(cfg["xai"]["checkpoints"]["resnet50"], tc.device)
     )
     _run_matrices(resnet, ds_resnet,
                   stream_keys=STREAM_KEYS_3,
@@ -81,14 +83,28 @@ def main(config_path):
                   tag="resnet50")
 
     # ══════════════════════════════════════════════════════════════════
-    # InceptionV3 — 3 streams, input 299
+    # InceptionV3 
     # ══════════════════════════════════════════════════════════════════
-    ds_inception = PairedDataset(dados, rotulos, val_transform_inception)
-    inception = ThreeStreamInceptionV3(num_classes=4).to(tc.device)
-    inception.load_state_dict(
-        load_checkpoint(cfg["xai"]["inception_checkpoint"], tc.device)
+    inception = build_inception_v3(tc.device)
+    extractor = Extractor(
+        name=inception.name,
+        output_dir=cfg["classification"]["features_dir"],
+        extractor=inception.feature_extractor,
+        preprocess=inception.preprocess,
+        device=tc.device,
+        
     )
-    _run_matrices(inception, ds_inception,
+    inception_classifier = inception.classifier_head
+    extractor.run(dados, file_name="labeled")
+    ds_inception = CustomDataset(extractor.data, rotulos)
+    inception_classifier[inception.classifier_index] = torch.nn.Linear(
+        in_features=extractor.data.shape[1], out_features=4, bias=True
+    )
+    inception_classifier.load_state_dict(
+        load_checkpoint(cfg["xai"]["checkpoints"]["inception_v3"], tc.device)
+    )
+    inception_classifier.to(tc.device)
+    _run_matrices(inception_classifier, ds_inception,
                   stream_keys=STREAM_KEYS_3,
                   img_size=299, cfg=tc, with_control=True,
                   tag="inception")

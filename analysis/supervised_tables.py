@@ -20,7 +20,6 @@ def fmt_mean_std(row, digits: int) -> str:
     return f"{row['mean_acc']:.{digits}f} $\\pm$ {row['std_acc']:.{digits}f}"
 
 
-
 def pivot_preserving_order(df, index, columns, values,
                            index_order=None, columns_order=None):
     """Faz pivot_table preservando a ordem original (de aparição)."""
@@ -160,10 +159,42 @@ def make_folds_table(df_folds: pd.DataFrame, model: str, digits: int = 4) -> str
 \\bottomrule
 \\end{{tabular}}
 \\end{{table}}"""
+def make_top10_table(df: pd.DataFrame, digits: int = 4,
+                     top_n: int = 10) -> str:
+    """Tabela com as `top_n` maiores acurácias, em ordem decrescente."""
+    sub = df.dropna(subset=['mean_acc']).copy()
+    sub = sub.sort_values('mean_acc', ascending=False).head(top_n)
 
+    # Descobre as top_n maiores acurácias (para negrito no valor máximo)
+    # Aqui destacamos apenas o #1; se preferir destacar empates, veja nota no fim.
+    max_val = sub['mean_acc'].max()
+
+    rows = []
+    for rank, (_, r) in enumerate(sub.iterrows(), start=1):
+        acc = fmt_mean_std(r, digits)
+        if r['mean_acc'] == max_val:
+            acc = f"\\textbf{{{acc}}}"
+        rows.append(
+            f"{rank} & {tex_escape(r['model'])} & {tex_escape(r['classifier'])} "
+            f"& {tex_escape(r['features'])} & {acc} \\\\"
+        )
+    body = '\n'.join(rows)
+
+    return f"""\\begin{{table}}[htbp]
+\\centering
+\\caption{{Top-{top_n} acurácias (ordem decrescente). Melhor valor em negrito.}}
+\\label{{tab:top{top_n}}}
+\\begin{{tabular}}{{clllc}}
+\\toprule
+\\# & Model & Classifier & Feature & Accuracy (m\\'edia $\\pm$ desvio) \\\\
+\\midrule
+{body}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}"""
 # ---------- main ------------------------------------------------------------
 
-def main(config_path, digits, output):
+def main(config_path,  digits, output):
     with open(config_path) as f:
         cfg = json.load(f)
 
@@ -196,6 +227,8 @@ def main(config_path, digits, output):
             r'Accuracy (média $\pm$ desvio-padrão) para \texttt{features = all}.',
             'tab:all_features',
         ))
+    if not df.empty:
+        blocos.append(make_top10_table(df, args.digits, top_n=10))
 
     # ===== Tabelas por classifier =====
     for clf in classifiers:

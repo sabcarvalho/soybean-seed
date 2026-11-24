@@ -8,10 +8,12 @@ from torch.utils.data import DataLoader
 
 from .data import PairedDataset
 from .transforms import train_transform, val_transform
+from sklearn.metrics import f1_score
 
-
-def train_one_epoch(model, dataloader, optimizer, criterion, device):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, freeze_bn=False):
     model.train()
+    if freeze_bn:
+        _freeze_bn_stats(model)
     running_loss, correct, total = 0.0, 0, 0
 
     for k, batch in enumerate(dataloader):
@@ -55,23 +57,38 @@ def validate(model, dataloader, criterion, device):
             correct += torch.sum(pred == labels).item()
             total += labels.size(0)
 
-    return (running_loss / total, correct / total,
-            np.array(all_targets), np.array(all_preds))
-
+    macro_f1 = f1_score(all_targets, all_preds, average="macro", zero_division=0)
+    return running_loss/total, correct/total, macro_f1, all_targets, all_preds
 
 def _unfreeze_and_reoptimize(model, cfg):
+    # 1. Congela tudo
     for p in model.encoder_rgb.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
     for p in model.encoder_rx.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
+
+    # 2. Descongela apenas os N últimos blocos top-level
+    n_blocks = getattr(cfg, "unfreeze_last_blocks", 2)
+    for encoder in [model.encoder_rgb, model.encoder_rx]:
+        blocks = list(encoder.children())
+        for block in blocks[-n_blocks:]:
+            for p in block.parameters():
+                p.requires_grad = True
 
     params = [
-        {"params": model.encoder_rgb.parameters(), "lr": cfg.lr * cfg.unfreeze_lr_scale},
-        {"params": model.encoder_rx.parameters(), "lr": cfg.lr * cfg.unfreeze_lr_scale},
+        {"params": [p for p in model.encoder_rgb.parameters() if p.requires_grad],
+         "lr": cfg.lr * cfg.unfreeze_lr_scale},
+        {"params": [p for p in model.encoder_rx.parameters() if p.requires_grad],
+         "lr": cfg.lr * cfg.unfreeze_lr_scale},
         {"params": model.classifier.parameters(), "lr": cfg.lr},
     ]
     return torch.optim.Adam(params, weight_decay=cfg.weight_decay)
 
+def _freeze_bn_stats(model):
+    for encoder in [model.encoder_rgb, model.encoder_rx]:
+        for m in encoder.modules():
+            if isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
+                m.eval() 
 
 def cross_validate_finetune(dados, rotulos, build_model, streams, cfg,
                              checkpoint_dir, model_tag,
@@ -125,8 +142,8 @@ def cross_validate_finetune(dados, rotulos, build_model, streams, cfg,
                 optim = _unfreeze_and_reoptimize(net, cfg)
 
             tr_loss, tr_acc = train_one_epoch(
-                net, train_loader, optim, criterion, cfg.device)
-            va_loss, va_acc, _, _ = validate(net, val_loader, criterion, cfg.device)
+                net, train_loader, optim, criterion, cfg.device, freeze_bn=(epoch >= cfg.unfreeze_after_epoch))
+            va_loss, va_acc, va_f1, _, _= validate(net, val_loader, criterion, cfg.device)
             print(f"\nTrain - Loss: {tr_loss:.4f}, Acc: {tr_acc:.4f}")
             print(f"Val   - Loss: {va_loss:.4f}, Acc: {va_acc:.4f}")
 
@@ -141,14 +158,13 @@ def cross_validate_finetune(dados, rotulos, build_model, streams, cfg,
                       f"{cfg.early_stopping_patience}")
                 if patience_counter >= cfg.early_stopping_patience:
                     print("Early stopping.")
-                    early_stopped = True
                     break
 
         net.load_state_dict(best_state)
         torch.save(net.state_dict(),
                    os.path.join(checkpoint_dir, f"{model_tag}_fold_{fold}.pth"))
 
-        final_loss, final_acc, _, _ = validate(net, val_loader, criterion, cfg.device)
+        final_loss, final_acc, _, _, _ = validate(net, val_loader, criterion, cfg.device)
         score_acc.append(final_acc)
         score_loss.append(final_loss)
         if logger is not None:

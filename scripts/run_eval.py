@@ -9,7 +9,8 @@ from common.config import TrainConfig
 from common.seed import set_seed
 from common.data import create_paths
 from xai.evaluation import evaluate_folds
-from xai.models import ThreeStreamResNet50, TwoStreamVGG19
+from xai.models import ThreeStreamResNet50, TwoStreamVGG19, ThreeStreamInceptionV3
+from xai.transforms import val_transform_inception
 
 
 def main(config_path):
@@ -22,6 +23,7 @@ def main(config_path):
     base = os.path.join(cfg["paths"]["checkpoints"],
                         cfg["xai"]["experiment_name"])
     output_matrix = os.path.join(cfg["paths"]["output"], "conf_matrix_fine_tune")
+    os.makedirs(output_matrix, exist_ok=True)
 
     evaluate_folds(
         dados, rotulos,
@@ -39,7 +41,15 @@ def main(config_path):
         cfg=tc,
         file_name= os.path.join(output_matrix, "matrix_resnet50")
     )
-
+    evaluate_folds(
+        dados, rotulos,
+        build_model=lambda: ThreeStreamInceptionV3(num_classes=4),
+        streams = 3,
+        checkpoint_pattern=os.path.join(base, "inception", "inception_fold_{fold}.pth"),
+        cfg=tc,
+        val_trans=val_transform_inception,
+        file_name= os.path.join(output_matrix, "matrix_inception")
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

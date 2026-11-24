@@ -1,5 +1,5 @@
 """Low-level torch training loops + k-fold."""
-import math
+import math, copy
 
 import numpy as np
 import torch
@@ -52,7 +52,7 @@ def _epoch_loop(loader, net, criterion, optimizer, device, training):
     return accuracy_score(pred, label), float(np.asarray(epoch_loss).mean()), pred, label
 
 
-def do_cross_val_torch(data, labels, net, cfg):
+def do_cross_val_torch(data, labels, net, cfg, feature_name, save_model=False):
     """5-fold CV over the (already extracted) feature matrix."""
     device = cfg.device
     criterion = torch.nn.CrossEntropyLoss().to(device)
@@ -74,10 +74,19 @@ def do_cross_val_torch(data, labels, net, cfg):
         )
         optimizer = make_optimizer(net, cfg.lr, cfg.weight_decay)
 
+        best_loss, best_state = float("inf"), None
+
         for _ in range(cfg.epochs):
             _epoch_loop(train_loader, net, criterion, optimizer, device, True)
+            _, loss, _, _ = _epoch_loop(val_loader, net, criterion, None, device, False)
+            if loss < best_loss:
+                best_loss = loss
+                best_state = copy.deepcopy(net.state_dict())
 
+        net.load_state_dict(best_state)
+        if save_model: torch.save(net.state_dict(), f"{feature_name}_fold_{fold}.pth")
         acc, loss, pred, label = _epoch_loop(val_loader, net, criterion, None, device, False)
+        
         score_acc.append(acc)
         score_loss.append(loss)
         preds.extend(pred)

@@ -79,7 +79,7 @@ def _run_torch_and_log(classifier, data, labels, feature_name,
     print(title)
     print("="*len(title))
     classifier.apply(reset_weights)
-    accs, losses, pred, label = do_cross_val_torch(data, labels, classifier, cfg)
+    accs, losses, pred, label = do_cross_val_torch(data, labels, classifier, cfg, feature_name)
     plot_confusion_matrix(label, pred, file_name = os.path.join(output_matrix_torch, f"{model_name}-{feature_name}"))
     if logger is not None:
         row = {

@@ -22,7 +22,7 @@ def plot_confusion_matrix(targets, preds, labels=None, file_name = None, format 
     plt.savefig(file_name, format=format, bbox_inches="tight")
 
 
-def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg, file_name=None, format="pdf"):
+def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg, val_trans=val_transform, file_name=None, format="pdf"):
     kfold = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True,
                             random_state=42)
     score_acc, score_loss = [], []
@@ -38,10 +38,10 @@ def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg
 
         val_loader = DataLoader(
             PairedDataset([dados[i] for i in va_idx], rotulos[va_idx],
-                          val_transform, streams=streams),
+                          val_trans, streams=streams),
             batch_size=cfg.batch_size, shuffle=False,
         )
-        loss, acc, tgt, prd = validate(net, val_loader, criterion, cfg.device)
+        loss, acc,_, tgt, prd = validate(net, val_loader, criterion, cfg.device)
         score_acc.append(acc)
         score_loss.append(loss)
         targets_all.append(tgt)
@@ -58,5 +58,5 @@ def evaluate_folds(dados, rotulos, build_model, streams, checkpoint_pattern, cfg
 
     targets = np.concatenate(targets_all)
     preds = np.concatenate(preds_all)
-    plot_confusion_matrix(targets, preds, file_name, format)
+    plot_confusion_matrix(targets, preds, file_name=file_name, format=format)
     return targets, preds
