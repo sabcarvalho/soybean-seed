@@ -159,6 +159,8 @@ def make_folds_table(df_folds: pd.DataFrame, model: str, digits: int = 4) -> str
 \\bottomrule
 \\end{{tabular}}
 \\end{{table}}"""
+
+
 def make_top10_table(df: pd.DataFrame, digits: int = 4,
                      top_n: int = 10) -> str:
     """Tabela com as `top_n` maiores acurácias, em ordem decrescente."""
@@ -192,6 +194,45 @@ def make_top10_table(df: pd.DataFrame, digits: int = 4,
 \\bottomrule
 \\end{{tabular}}
 \\end{{table}}"""
+
+def make_top_n_ssl_table(df: pd.DataFrame, digits: int = 4,
+                         top_n: int = 10) -> str:
+    """Tabela Top-N de acurácias para experimentos rotulados/não-rotulados."""
+    sub = df.dropna(subset=['mean_acc']).copy()
+    sub = sub.sort_values('mean_acc', ascending=False).head(top_n)
+    max_val = sub['mean_acc'].max()
+
+    def _int_or_dash(v):
+        return f"{int(v)}" if pd.notna(v) else '--'
+
+    rows = []
+    for rank, (_, r) in enumerate(sub.iterrows(), start=1):
+        acc = fmt_mean_std(r, digits)
+        if r['mean_acc'] == max_val:
+            acc = f"\\textbf{{{acc}}}"
+        rows.append(
+            f"{rank} & {tex_escape(r['model'])} & {tex_escape(r['classifier'])} "
+            f"& {tex_escape(r['features'])} & {tex_escape(r['mode'])} "
+            f"& {_int_or_dash(r['n_labeled'])} & {_int_or_dash(r['n_unlabeled'])} "
+            f"& {acc} \\\\"
+        )
+    body = '\n'.join(rows)
+
+    return f"""\\begin{{table}}[htbp]
+\\centering
+\\caption{{Top-{top_n} acurácias em experimentos com dados rotulados/não-rotulados
+(ordem decrescente). Melhor valor em negrito.}}
+\\label{{tab:top{top_n}_ssl}}
+\\begin{{tabular}}{{cllllrrl}}
+\\toprule
+\\# & Model & Classifier & Feature & Mode & \\#Lab. & \\#Unlab. & Accuracy (m\\'edia $\\pm$ desvio) \\\\
+\\midrule
+{body}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}"""
+
+
 # ---------- main ------------------------------------------------------------
 
 def main(config_path,  digits, output):
@@ -261,6 +302,20 @@ def main(config_path,  digits, output):
         # 2) Tabela detalhada por modelo
         for model in dict.fromkeys(df_folds['model'].tolist()):
             blocos.append(make_folds_table(df_folds, model, digits))
+
+    if cfg["analysis"]["csv_results_ssl"] is not None:
+        df_ssl = pd.read_csv(cfg["analysis"]["csv_results_ssl"])
+        for c in ('mean_acc', 'std_acc', 'n_labeled',
+                  'n_unlabeled', '_elapsed_s'):
+            if c in df_ssl.columns:
+                df_ssl[c] = pd.to_numeric(df_ssl[c], errors='coerce')
+
+        # Reaproveita a coluna formatada "média ± desvio"
+        df_ssl['value'] = df_ssl.apply(
+            lambda r: fmt_mean_std(r, args.digits), axis=1)
+
+        blocos.append(
+            make_top_n_ssl_table(df_ssl, args.digits, top_n=10))
 
     latex = '\n\n'.join(blocos)
     with open(output, 'w', encoding='utf-8') as f:

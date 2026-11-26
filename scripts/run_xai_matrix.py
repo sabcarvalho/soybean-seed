@@ -26,7 +26,7 @@ STREAM_KEYS_3 = ("rgb", "rx", "hiper")
 
 def _run_matrices(model, dataset, stream_keys, img_size, cfg,
                   streams=("rgb", "rx"), with_control=False,
-                  tag="model"):
+                  tag="model", par_dataset=None):
     """Gera as matrizes (com e sem Grad-CAM) para um modelo."""
     exemplos = coletar_exemplos_matriz(
         model, dataset, n_classes=4, device=cfg.device
@@ -39,6 +39,7 @@ def _run_matrices(model, dataset, stream_keys, img_size, cfg,
             stream=stream, grad=True,
             stream_keys=stream_keys,
             img_size=img_size,
+            par_dataset=par_dataset,
         )
         if with_control:
             plotar_matriz_gradcam(
@@ -46,6 +47,7 @@ def _run_matrices(model, dataset, stream_keys, img_size, cfg,
                 stream=stream, grad=False,
                 stream_keys=stream_keys,
                 img_size=img_size,
+                par_dataset=par_dataset,
             )
 
 
@@ -81,9 +83,21 @@ def main(config_path):
                   stream_keys=STREAM_KEYS_3,
                   img_size=224, cfg=tc, with_control=True,
                   tag="resnet50")
+    # ══════════════════════════════════════════════════════════════════
+    # InceptionV3 — 3 streams, input 299
+    # ══════════════════════════════════════════════════════════════════
+    ds_inception = PairedDataset(dados, rotulos, val_transform_inception)
+    inception = ThreeStreamInceptionV3(num_classes=4).to(tc.device)
+    inception.load_state_dict(
+        load_checkpoint(cfg["xai"]["checkpoints"]["inception_v3"], tc.device)
+    )
+    _run_matrices(inception, ds_inception,
+                  stream_keys=STREAM_KEYS_3,
+                  img_size=299, cfg=tc, with_control=True,
+                  tag="inception")
 
     # ══════════════════════════════════════════════════════════════════
-    # InceptionV3 
+    # InceptionV3 — classification
     # ══════════════════════════════════════════════════════════════════
     inception = build_inception_v3(tc.device)
     extractor = Extractor(
@@ -94,20 +108,21 @@ def main(config_path):
         device=tc.device,
         
     )
-    inception_classifier = inception.classifier_head
-    extractor.run(dados, file_name="labeled")
-    ds_inception = CustomDataset(extractor.data, rotulos)
-    inception_classifier[inception.classifier_index] = torch.nn.Linear(
-        in_features=extractor.data.shape[1], out_features=4, bias=True
-    )
-    inception_classifier.load_state_dict(
-        load_checkpoint(cfg["xai"]["checkpoints"]["inception_v3"], tc.device)
-    )
-    inception_classifier.to(tc.device)
-    _run_matrices(inception_classifier, ds_inception,
-                  stream_keys=STREAM_KEYS_3,
-                  img_size=299, cfg=tc, with_control=True,
-                  tag="inception")
+    # inception_classifier = inception.classifier_head
+    # extractor.run(dados, file_name="labeled")
+    # ds_inception = CustomDataset(extractor.data, rotulos)
+    # inception_classifier[inception.classifier_index] = torch.nn.Linear(
+    #     in_features=extractor.data.shape[1], out_features=4, bias=True
+    # )
+    # inception_classifier.load_state_dict(
+    #     load_checkpoint(cfg["xai"]["checkpoints"]["inception_v3"], tc.device)
+    # )
+    # inception_classifier.to(tc.device)
+    # _run_matrices(inception_classifier, ds_inception, 
+    #               stream_keys=STREAM_KEYS_3,
+    #               img_size=299, cfg=tc, with_control=True,
+    #               tag="inception",
+    #               par_dataset=PairedDataset(dados, rotulos, val_transform_inception))
 
 
 if __name__ == "__main__":

@@ -68,6 +68,7 @@ def _overlay_gradcam(wrapper, target_layer, input_tensor, img_float):
 def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
                           stream="rgb", grad=True,
                           stream_keys=("rgb", "rx"),
+                          par_dataset = None,
                           img_size: int = 224):
     """Matriz NxN de exemplos com Grad-CAM sobreposto.
 
@@ -106,13 +107,20 @@ def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
                 continue
 
             idx = exemplos[(i, j)]
-            caminhos = dataset.dados[idx]
-            sample = dataset[idx]
+            if par_dataset is None:
+                caminhos = dataset.dados[idx]
+                sample = dataset[idx]
+            else:
+                caminhos = par_dataset.dados[idx]
+                sample = par_dataset[idx]
             inputs, _ = sample[:-1], sample[-1]
 
             wrapper = _make_wrapper(model, active_idx, inputs, cfg.device)
             input_tensor = inputs[active_idx].unsqueeze(0).to(cfg.device)
-            target_layer = model.encoder_rgb if stream == "rgb" else model.encoder_rx
+            if hasattr(model, "encoder_rgb"):
+                target_layer = model.encoder_rgb if stream == "rgb" else model.encoder_rx
+            else:
+                target_layer = model
 
             # imagem "base" para o overlay
             if stream == "rgb":
@@ -123,6 +131,7 @@ def plotar_matriz_gradcam(model, dataset, exemplos, cfg,
                 img = cv2.cvtColor(img_raw, cv2.COLOR_GRAY2RGB)
 
             img_float = np.float32(cv2.resize(img, (img_size, img_size))) / 255
+            print(input_tensor.shape)
 
             if grad:
                 vis = _overlay_gradcam(wrapper, target_layer, input_tensor, img_float)

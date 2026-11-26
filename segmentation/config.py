@@ -20,6 +20,9 @@ class PipelineConfig:
     min_circularity: float = 0.3
     min_area: float = 0.3
 
+    disk_open: int = 2
+    disk_close: int = 1
+
     # Homography
     ransac_threshold: float = 1.0
 

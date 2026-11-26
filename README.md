@@ -1,7 +1,7 @@
 # Repositório do projeto FAPESP: Inteligência Artificial Explicável para a Classificação de Sementes de Soja.
 
 ## Sobre o Projeto
-Este repositório contém os algoritmos, protocolos e scripts dos pipelines desenvolvidos no projeto de Iniciação Científica: Inteligência Artificial Explicável para a Classificação de Sementes de Soja. Financiado pela Fundação de Amparo à Pesquisa do Estado de São Paulo (FAPESP), de Outubro de 2024 a Setembro de 2025, sob a concessão número 2024/10564-3.
+Este repositório contém os algoritmos, protocolos e scripts dos pipelines desenvolvidos no projeto de Iniciação Científica: Inteligência Artificial Explicável para a Classificação de Sementes de Soja. Financiado pela Fundação de Amparo à Pesquisa do Estado de São Paulo (FAPESP), de Outubro de 2025 a Setembro de 2026, sob a concessão número 2025/20861-8.
 
 Aluna: Sabrina Sousa Carvalho
 
@@ -40,7 +40,7 @@ imagens multi-modais (RGB, raio-X e hiperespectral).
    (padrão: 5 colunas por linha).
 4. **Homografia** — alinha a imagem RX à imagem RGB via
    `cv2.findHomography` (RANSAC).
-5. **Recorte** — cada semente é recortada (padrão 64×45 px) nas três
+5. **Recorte** — cada semente é recortada (padrão 64×50 px) nas três
    modalidades e salva em `output/`.
 
 ### Uso
@@ -116,14 +116,15 @@ fine-tuning de redes pré-treinadas.
 |---|---|---|
 | **TwoStreamVGG19** | RGB + RX | 3 camadas densas (2×4096 → 4) |
 | **ThreeStreamResNet50** | RGB + RX + hiper (média por banda) | Linear (4608 → 4) |
-
+| **ThreeStreamInception** | RGB + RX + hiper (média por banda) | Linear (4608 → 4) |
 ## Pipeline
 
 1. **Fine-tuning 5-fold** com congelamento progressivo:
-   - Épocas 0-4: encoders congelados, só o classificador treina.
-   - Época 5+: encoders descongelados com LR reduzida (`lr × 0.01`).
+   - Épocas 0-14: encoders congelados, só o classificador treina.
+   - Época 15+: encoders descongelados com LR reduzida (`lr × 0.01`).
    - Early stopping por paciência na loss de validação.
    - Checkpoint do melhor estado por fold.
+   - Adam + CrossEntropy
 2. **Avaliação final** por fold + matriz de confusão agregada.
 3. **Grad-CAM**: para cada par `(real, predito)`, escolhe um exemplo
    e gera o heatmap sobre a via RGB **e** a via RX, montando uma

@@ -16,8 +16,7 @@ def main(config_path: str):
     cfg = PipelineConfig(**seg.get("pipeline", {}))
     templates = FileTemplates(**seg.get("file_templates", {}))
     data_dir = cfg_json["paths"]["raw_data"]
-    output_dir = cfg_json["paths"]["output"]
-
+    
     disc = seg.get("discovery", {})
     if disc.get("enabled", True):
         labeled_ids, unlabeled_ids = discover_ids(
