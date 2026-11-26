@@ -104,20 +104,20 @@ data/                  # entrada (não versionada)
 output/                # features cacheadas (não versionadas)
 ```
 
-# Seed XAI
+## Seed XAI
 
 Interpretabilidade (Grad-CAM) de classificadores multi-modais de
 sementes de soja (RGB + RX + hiperespectral), treinados com
 fine-tuning de redes pré-treinadas.
 
-## Modelos
+### Modelos
 
 | Modelo | Streams | Cabeça |
 |---|---|---|
 | **TwoStreamVGG19** | RGB + RX | 3 camadas densas (2×4096 → 4) |
 | **ThreeStreamResNet50** | RGB + RX + hiper (média por banda) | Linear (4608 → 4) |
 | **ThreeStreamInception** | RGB + RX + hiper (média por banda) | Linear (4608 → 4) |
-## Pipeline
+### Pipeline
 
 1. **Fine-tuning 5-fold** com congelamento progressivo:
    - Épocas 0-14: encoders congelados, só o classificador treina.
