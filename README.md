@@ -21,11 +21,25 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+### Estrutura
+
+```
+common/                # códigos comuns entre pipelines
+analysis/              # código de construção de tabelas e sumarização de resultados
+segmentation/          # códigos do pipeline de segmentação
+classification/        # códigos do pipeline de classificação
+xai/                   # códigos do pipeline do Grad-CAM e fine-tuning
+semi_supervised/       # códigos de aprendizado semissupervisionado (Label Spreading/Propagation e PseudoLabeling)
+scripts/               # entry points
+data/                  # entrada (não versionada)
+output/                # features cacheadas (não versionadas)
+```
+
 
 ## Seed Segmentation Pipeline
 
 Pipeline de segmentação e recorte individual de sementes a partir de
-imagens multi-modais (RGB, raio-X e hiperespectral).
+imagens multimodais (RGB, raio-X e hiperespectral).
 
 > ⚠️ **Os dados originais não estão disponíveis neste repositório.**
 > Veja [`data/README.md`](data/README.md) para o formato esperado.
@@ -53,14 +67,7 @@ python scripts/run_pipeline.py --config config.json
 
 Saída: `output/RGB/`, `output/RX/`, `output/HIPER/`.
 
-### Estrutura
 
-```
-seed_segmentation/   # código do pipeline
-scripts/             # entry points
-data/                # entrada (não versionada)
-output/              # saída (não versionada)
-```
 ## Seed Classification Pipeline
 
 Pipeline de classificação de sementes de soja a partir de features
@@ -95,18 +102,10 @@ python scripts/run_experiments.py --config config.json
 As features extraídas ficam cacheadas em `output/features/<modelo>/data.npy`,
 então rodar de novo não re-extrai (a menos que você apague o arquivo).
 
-### Estrutura
-
-```
-seed_classification/   # código do pipeline
-scripts/               # entry points
-data/                  # entrada (não versionada)
-output/                # features cacheadas (não versionadas)
-```
 
 ## Seed XAI
 
-Interpretabilidade (Grad-CAM) de classificadores multi-modais de
+Interpretabilidade (Grad-CAM) de classificadores multimodais de
 sementes de soja (RGB + RX + hiperespectral), treinados com
 fine-tuning de redes pré-treinadas.
 
