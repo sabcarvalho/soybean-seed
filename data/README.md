@@ -7,7 +7,7 @@ Para executar o pipeline é necessário ter, para cada imagem `<id>`, os arquivo
 | Modalidade    | Nome do arquivo         |
 |---------------|--------------------------|
 | RGB           | `RIP2_<id>-RGB.tif`     |
-| RX            | `RIP2_<id>.bmp`         |
+| RX            | `RIP2_<id>.tif`         |
 | Hiperespectral| `RIP2_<id>.bil` + `.hdr` |
 | Anotação      | `RIP2_<id>-RGB.json` (opcional) |
 
